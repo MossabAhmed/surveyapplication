@@ -5,7 +5,11 @@ app_name = "mysurvey"
 
 urlpatterns = [
     path('__debug__/', include('debug_toolbar.urls')),
-    path('', views.dashboard, name='Dashboard'),
+    path('', views.MySurvey, name='Dashboard'),
+
+    # the views need to be Change 
+    path('CreateSurvey', views.MySurvey, name='CreateSurvey'),
+    path('responses', views.MySurvey, name='Responses'),
 
 ]
 

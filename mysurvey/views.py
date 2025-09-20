@@ -1,5 +1,5 @@
 from django.shortcuts import render
 
 # Create your views here.
-def dashboard(request):
+def MySurvey(request):
     return render(request, 'mysurvey/MySurvey.html')

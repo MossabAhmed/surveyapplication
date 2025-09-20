@@ -16,15 +16,15 @@
                     <a href="{% url 'mysurvey:Dashboard' %}">My Survey</a>
                 </li>
                 <li>
-                    <a href="{% url 'survey:CreateSurvey' %}">Create Survey</a>
+                    <a href="{% url 'mysurvey:CreateSurvey' %}">Create Survey</a>
                 </li>
                 <li>
-                    <a href="{% url 'respone:Responses' %}">Responses</a>
+                    <a href="{% url 'mysurvey:Responses' %}">Responses</a>
                 </li>
             </ul>
         </div>
         <a class="btn btn-ghost text-xl hover:cursor-pointer"
-           href="{% url 'index' %}">daisyUI</a>
+           href="{% url 'mysurvey:Dashboard' %}">daisyUI</a>
     </div>
     <div class="navbar-center hidden lg:flex">
         <ul class="menu menu-horizontal px-1">
@@ -32,14 +32,14 @@
                 <a href="{% url 'mysurvey:Dashboard' %}">My Survey</a>
             </li>
             <li>
-                <a href="{% url 'survey:CreateSurvey' %}">Create Survey</a>
+                <a href="{% url 'mysurvey:CreateSurvey' %}">Create Survey</a>
             </li>
             <li>
-                <a href="{% url 'respone:Responses' %}">Responses</a>
+                <a href="{% url 'mysurvey:Responses' %}">Responses</a>
             </li>
         </ul>
     </div>
     <div class="navbar-end">
-        <a class="btn btn-primary" href="{% url 'CreateSurvey' %}">Create New Survey</a>
+        <a class="btn btn-primary" href="{% url 'mysurvey:CreateSurvey' %}">Create New Survey</a>
     </div>
 </div>
