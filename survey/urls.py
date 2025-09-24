@@ -5,10 +5,10 @@ from . import views
 
 urlpatterns = [
     path('__debug__/', include('debug_toolbar.urls')),
-    path('', views.MySurvey, name='Dashboard'),
-    # the views need to be Change 
-    path('CreateSurvey', views.MySurvey, name='CreateSurvey'),
-    path('responses', views.MySurvey, name='Responses'),
+    path('', views.Index, name='Dashboard'),
+    # the views need to be Change
+    path('CreateSurvey', views.Index, name='CreateSurvey'),
+    path('responses', views.Index, name='Responses'),
 
 ]
 

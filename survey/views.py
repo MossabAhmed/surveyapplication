@@ -1,12 +1,10 @@
 from django.shortcuts import render
+from .models import Survey
 
 # Create your views here.
-def MySurvey(request):
-    return render(request, 'mysurvey/MySurvey.html')
-
-# Create your views here.
-def index(request):
-    return render(request, 'base.html')
+def Index(request):
+    context = Survey.objects.order_by('-last_updated')[:4]
+    return render(request, 'index.html', {'surveys': context})
 
 def CreateSurvey(request):
     pass
@@ -18,3 +16,4 @@ def CreateFile(request):
     filename = request.POST.get('filename')
     context = {'filename': filename}
     return render(request, 'partials/subFile.html',context)
+

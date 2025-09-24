@@ -1,0 +1,5 @@
+<div class="p-4 flex flex-row gap-4">
+    {% for survey in surveys %}
+        {% include "partials/surveyRecntCard.html" with title=survey.title description=survey.description created_by=survey.created_by last_updated=survey.last_updated %}
+    {% endfor %}
+</div>
