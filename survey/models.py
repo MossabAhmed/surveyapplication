@@ -19,3 +19,13 @@ class Survey(models.Model):
     last_updated = models.DateTimeField(auto_now=True)
     state = models.CharField(max_length=20, choices=STATE_CHOICES, default="draft")
     created_by =  models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='surveys')
+
+    @property
+    def status_badge_class(self):
+        if self.state == 'published':
+            return 'bg-primary text-black'
+        elif self.state == 'draft':
+            return 'bg-yellow-200 text-black'
+        elif self.state == 'archived':
+            return 'bg-red-200 text-black'
+        return 'bg-gray-100 text-black'

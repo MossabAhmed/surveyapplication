@@ -1,0 +1,288 @@
+<div class="w-full px-4 lg:px-12">
+    <!-- Start coding here -->
+    <div class="bg-white shadow-lg border border-gray-200 relative sm:rounded-lg overflow-hidden w-full">
+        <!-- header bar -->
+        <div class="flex flex-col md:flex-row items-center justify-between space-y-3 md:space-y-0 md:space-x-4 p-4">
+            <div class="w-full md:w-1/2">
+                <!-- searh bar-->
+                <form class="flex items-center">
+                    <label for="simple-search" class="sr-only">Search</label>
+                    <div class="relative w-full">
+                        <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                            <svg aria-hidden="true"
+                                 class="w-5 h-5 text-gray-500 "
+                                 fill="currentColor"
+                                 viewbox="0 0 20 20"
+                                 xmlns="http://www.w3.org/2000/svg">
+                                <path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd" />
+                            </svg>
+                        </div>
+                        <input type="text"
+                               id="simple-search"
+                               class="bg-gray-100 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-primary-500 focus:border-primary-500 block w-full pl-10 p-2"
+                               placeholder="Search"
+                               required="">
+                    </div>
+                </form>
+            </div>
+            <!-- buttons -->
+            <div class="w-full md:w-auto flex flex-col md:flex-row space-y-2 md:space-y-0 items-stretch md:items-center justify-end md:space-x-3 flex-shrink-0">
+                <!-- TDOD -->
+                {% comment %} <button type="button" class="flex items-center justify-center text-white bg-primary-700 hover:bg-primary-800 focus:ring-4 focus:ring-primary-300 font-medium rounded-lg text-sm px-4 py-2 dark:bg-primary-600 dark:hover:bg-primary-700 focus:outline-none dark:focus:ring-primary-800">
+                    <svg class="h-3.5 w-3.5 mr-2" fill="currentColor" viewbox="0 0 20 20" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                        <path clip-rule="evenodd" fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" />
+                    </svg>
+                    Add product
+                </button> {% endcomment %}
+                <div class="flex items-center space-x-3 w-full md:w-auto">
+                    <!-- filter dropdown -->
+                    <button id="actionsDropdownButton"
+                            data-dropdown-toggle="actionsDropdown"
+                            class="w-full md:w-auto flex items-center justify-center py-2 px-4 text-sm font-medium text-gray-900 focus:outline-none bg-white rounded-lg border border-gray-200 hover:bg-gray-100 hover:text-primary-700 focus:z-10 focus:ring-4 focus:ring-gray-200"
+                            type="button">
+                        <svg class="-ml-1 mr-1.5 w-5 h-5"
+                             fill="currentColor"
+                             viewbox="0 0 20 20"
+                             xmlns="http://www.w3.org/2000/svg"
+                             aria-hidden="true">
+                            <path clip-rule="evenodd" fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" />
+                        </svg>
+                        Actions
+                    </button>
+                    <div id="actionsDropdown"
+                         class="hidden z-10 w-44 bg-white rounded divide-y divide-gray-100 shadow">
+                        <ul class="py-1 text-sm text-gray-700"
+                            aria-labelledby="actionsDropdownButton">
+                            <li>
+                                <a href="#" class="block py-2 px-4 hover:bg-gray-100">Mass Edit</a>
+                            </li>
+                        </ul>
+                        <div class="py-1">
+                            <a href="#"
+                               class="block py-2 px-4 text-sm text-gray-700 hover:bg-gray-100">Delete all</a>
+                        </div>
+                    </div>
+                    <button id="filterDropdownButton"
+                            data-dropdown-toggle="filterDropdown"
+                            class="w-full md:w-auto flex items-center justify-center py-2 px-4 text-sm font-medium text-gray-900 focus:outline-none bg-white rounded-lg border border-gray-200 hover:bg-gray-100 hover:text-primary-700 focus:z-10 focus:ring-4 focus:ring-gray-200"
+                            type="button">
+                        <svg xmlns="http://www.w3.org/2000/svg"
+                             aria-hidden="true"
+                             class="h-4 w-4 mr-2 text-gray-400"
+                             viewbox="0 0 20 20"
+                             fill="currentColor">
+                            <path fill-rule="evenodd" d="M3 3a1 1 0 011-1h12a1 1 0 011 1v3a1 1 0 01-.293.707L12 11.414V15a1 1 0 01-.293.707l-2 2A1 1 0 018 17v-5.586L3.293 6.707A1 1 0 013 6V3z" clip-rule="evenodd" />
+                        </svg>
+                        Filter
+                        <svg class="-mr-1 ml-1.5 w-5 h-5"
+                             fill="currentColor"
+                             viewbox="0 0 20 20"
+                             xmlns="http://www.w3.org/2000/svg"
+                             aria-hidden="true">
+                            <path clip-rule="evenodd" fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" />
+                        </svg>
+                    </button>
+                    <div id="filterDropdown"
+                         class="z-10 hidden w-48 p-3 bg-white rounded-lg shadow">
+                        <h6 class="mb-3 text-sm font-medium text-gray-900">Choose brand</h6>
+                        <ul class="space-y-2 text-sm" aria-labelledby="filterDropdownButton">
+                            <li class="flex items-center">
+                                <input id="apple"
+                                       type="checkbox"
+                                       value=""
+                                       class="w-4 h-4 bg-gray-100 border-gray-300 rounded text-primary-600 focus:ring-primary-500 focus:ring-2">
+                                <label for="apple" class="ml-2 text-sm font-medium text-gray-900">Apple (56)</label>
+                            </li>
+                            <li class="flex items-center">
+                                <input id="fitbit"
+                                       type="checkbox"
+                                       value=""
+                                       class="w-4 h-4 bg-gray-100 border-gray-300 rounded text-primary-600 focus:ring-primary-500 focus:ring-2">
+                                <label for="fitbit" class="ml-2 text-sm font-medium text-gray-900">Microsoft (16)</label>
+                            </li>
+                            <li class="flex items-center">
+                                <input id="razor"
+                                       type="checkbox"
+                                       value=""
+                                       class="w-4 h-4 bg-gray-100 border-gray-300 rounded text-primary-600 focus:ring-primary-500 focus:ring-2">
+                                <label for="razor" class="ml-2 text-sm font-medium text-gray-900">Razor (49)</label>
+                            </li>
+                            <li class="flex items-center">
+                                <input id="nikon"
+                                       type="checkbox"
+                                       value=""
+                                       class="w-4 h-4 bg-gray-100 border-gray-300 rounded text-primary-600 focus:ring-primary-500 focus:ring-2">
+                                <label for="nikon" class="ml-2 text-sm font-medium text-gray-900">Nikon (12)</label>
+                            </li>
+                            <li class="flex items-center">
+                                <input id="benq"
+                                       type="checkbox"
+                                       value=""
+                                       class="w-4 h-4 bg-gray-100 border-gray-300 rounded text-primary-600 focus:ring-primary-500  focus:ring-2 ">
+                                <label for="benq" class="ml-2 text-sm font-medium text-gray-900 ">BenQ (74)</label>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Table Content-->
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm text-left text-gray-500 table-fixed">
+                <thead class="text-xs text-gray-700 uppercase bg-gray-50">
+                    <tr>
+                        <th scope="col" class="px-4 py-3 w-[20%]">Title</th>
+                        <th scope="col" class="px-4 py-3 w-[40%]">Description</th>
+                        <th scope="col" class="px-4 py-3 w-[15%]">Status</th>
+                        <th scope="col" class="px-4 py-3 w-[15%]">Responses</th>
+                        <th scope="col" class="px-4 py-3 w-[15%]">Last Updated</th>
+                        <th scope="col" class="px-4 py-3 w-[8%] ">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for survey in surveys %}
+                        {% include "partials/tableRow.html" with survey=survey %}
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <!-- Footer -->
+        <nav class="flex flex-col md:flex-row justify-between items-start md:items-center space-y-3 md:space-y-0 p-4"
+             aria-label="Table navigation">
+            <span class="text-sm font-normal text-gray-500">
+                Showing
+                <span class="font-semibold text-gray-900">1-10</span>
+                of
+                <span class="font-semibold text-gray-900">1000</span>
+            </span>
+            <ul class="inline-flex items-stretch -space-x-px">
+                <li>
+                    <a href="#"
+                       class="flex items-center justify-center h-full py-1.5 px-3 ml-0 text-gray-500 bg-white rounded-l-lg border border-gray-300 hover:bg-gray-100 hover:text-gray-700">
+                        <span class="sr-only">Previous</span>
+                        <svg class="w-5 h-5"
+                             aria-hidden="true"
+                             fill="currentColor"
+                             viewbox="0 0 20 20"
+                             xmlns="http://www.w3.org/2000/svg">
+                            <path fill-rule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd" />
+                        </svg>
+                    </a>
+                </li>
+                <li>
+                    <a href="#"
+                       class="flex items-center justify-center text-sm py-2 px-3 leading-tight text-gray-500 bg-white border border-gray-300 hover:bg-gray-100 hover:text-gray-700">1</a>
+                </li>
+                <li>
+                    <a href="#"
+                       class="flex items-center justify-center text-sm py-2 px-3 leading-tight text-gray-500 bg-white border border-gray-300 hover:bg-gray-100 hover:text-gray-700 ">2</a>
+                </li>
+                <li>
+                    <a href="#"
+                       aria-current="page"
+                       class="flex items-center justify-center text-sm z-10 py-2 px-3 leading-tight text-primary-600  bg-primary-50 border border-primary-300 hover:bg-primary-100 hover:text-primary-700">3</a>
+                </li>
+                <li>
+                    <a href="#"
+                       class="flex items-center justify-center text-sm py-2 px-3 leading-tight text-gray-500 bg-white border border-gray-300 hover:bg-gray-100 hover:text-gray-700 ">...</a>
+                </li>
+                <li>
+                    <a href="#"
+                       class="flex items-center justify-center text-sm py-2 px-3 leading-tight text-gray-500 bg-white border border-gray-300 hover:bg-gray-100 hover:text-gray-700 ">100</a>
+                </li>
+                <li>
+                    <a href="#"
+                       class="flex items-center justify-center h-full py-1.5 px-3 leading-tight text-gray-500 bg-white rounded-r-lg border border-gray-300 hover:bg-gray-100 hover:text-gray-700 ">
+                        <span class="sr-only">Next</span>
+                        <svg class="w-5 h-5"
+                             aria-hidden="true"
+                             fill="currentColor"
+                             viewbox="0 0 20 20"
+                             xmlns="http://www.w3.org/2000/svg">
+                            <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" />
+                        </svg>
+                    </a>
+                </li>
+            </ul>
+        </nav>
+    </div>
+</div>
+{% comment %} Requires Flowbite JS
+Table with products#
+This responsive table component can be used to show a list of products with images, categories, sales generated, and ratings in your e-commerce platform.
+Get Figma file
+Show code
+Inter
+Requires Flowbite JS
+Table with expandable rows#
+Use this example to expand a table row when clicking on it and show more details about a given data entry such as images, descriptions, and more.
+Get Figma file
+Unlock the code
+Inter
+Requires Flowbite JS
+Project management table (user tasks)#
+Use this example to show a list of tasks (to-do items) with checkboxes, filter elements and user avatars inside a responsive table component.
+Get Figma file
+Unlock the code
+Inter
+Requires Flowbite JS
+User management table (CRUD)#
+Use this example to show all the users from an application inside a row where you can show the avatar, role, status, social profiles, and CRUD actions.
+Get Figma file
+Unlock the code
+Inter
+Requires Flowbite JS
+Comparison table#
+This example can be used to compare multiple data sets such as products inside a table showing the differences in specifications based on rows and columns.
+Get Figma file
+Unlock the code
+Inter
+Requires Flowbite JS
+Table with sortable rows#
+Use this example of a responsive table to show sortable rows and a lift of products with details such as category, price, sales, and status.
+Get Figma file
+Unlock the code
+Inter
+Explore other blocks
+Check out some of the other recommended blocks from Flowbite to get started building your website faster with Tailwind CSS.
+View all blocks
+Product Categories
+6 components
+E-commerce UI
+Product Categories thumbnail dark mode
+FAQ Sections
+5 components
+Marketing UI
+FAQ Sections thumbnail dark mode
+Delete Confirm (CRUD)
+6 components
+Application UI
+Delete Confirm (CRUD) thumbnail dark mode
+Sign up for our newsletter
+Do you want to get notified when a new component is added to Flowbite? Sign up for our newsletter and you will be among the first to find out about new features, components, versions, and tools.
+Enter your email
+By subscribing, you agree with ConvertKit's Terms of Service and Privacy Policy.
+Flowbite Logo
+Flowbite
+Flowbite is an ecosystem built on top of Tailwind CSS including a component library, block sections, a Figma design system and other resources.
+Resources
+Documentation
+Flowbite Blocks
+Flowbite Icons
+Flowbite Figma
+Flowbite GPT
+Pro version
+Help & support
+Contact us
+Support center
+Hire us
+Follow us
+Discord
+Github
+Twitter
+Legal
+License (EULA)
+Privacy policy
+Terms & conditions
+Brand guideline
+© 2019-2025 Flowbite™ is a registered trademark. All Rights Reserved. {% endcomment %}
