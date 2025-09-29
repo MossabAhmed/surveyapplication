@@ -3,7 +3,7 @@ from .models import Survey
 
 # Create your views here.
 def Index(request):
-    context = Survey.objects.order_by('-last_updated')[:4]
+    context = Survey.objects.order_by('-last_updated')[:5]
     return render(request, 'index.html', {'surveys': context})
 
 def CreateSurvey(request):
