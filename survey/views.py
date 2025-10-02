@@ -6,6 +6,9 @@ def Index(request):
     context = Survey.objects.order_by('-last_updated')[:5]
     return render(request, 'index.html', {'surveys': context})
 
+def Responses(request):
+    return render(request, 'Responses.html')
+
 def CreateSurvey(request):
     pass
 
