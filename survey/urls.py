@@ -14,6 +14,7 @@ urlpatterns = [
 
 url_for_htmx = [
     path('CreateSubFile', views.CreateFile, name='CreateSubFile'),
+    path("surveys/<int:pk>/delete", views.DeleteSurvey, name="DeleteSurvey")
 ]
 
 urlpatterns += url_for_htmx
