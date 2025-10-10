@@ -45,6 +45,7 @@ def Responses(request):
 
 def CreateSurvey(request):
     context = {
+                'question_library': que.get_available_type_names()  
     }
     return render(request, 'CreateSurvey.html', context)
 
