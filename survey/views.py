@@ -108,7 +108,6 @@ def Index(request, page_number=1):
     context = {
         'page': page,
         'query': query, # Add this
-        'is_responses_page': False, # Explicitly set for Dashboard
     }
 
     is_htmx = request.headers.get('HX-Request') == 'true'
@@ -148,7 +147,6 @@ def Responses(request, page_number=1):
         'page': page,
         'query': query,
         'recent_surveys': recent_surveys_with_responses,
-        'is_responses_page': True, # Added for sidebar consistency
     }
     
     is_htmx = request.headers.get('HX-Request') == 'true'
