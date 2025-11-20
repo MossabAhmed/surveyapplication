@@ -1,4 +1,5 @@
 <div
+  id="responses-table-and-pagination-container"
   class="bg-white shadow-lg border border-gray-200 relative sm:rounded-lg overflow-hidden w-full"
 >
   <!-- searh bar-->
@@ -32,7 +33,8 @@
             value="{{ query|default:'' }}"
             hx-get="{% url 'Responses' %}"
             hx-trigger="keyup changed delay:500ms"
-            hx-target="#responses-table-body"
+            hx-target="#responses-table-and-pagination-container"
+            hx-swap="outerHTML"
             hx-indicator="#htmx-spinner"
             id="simple-search"
             class="bg-gray-100 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-primary-500 focus:border-primary-500 block w-full pl-10 p-2"
@@ -70,7 +72,7 @@
       </tbody>
     </table>
   </div>
-</div>
 
-<!-- Pagination -->
-{% include "partials/Responses/responses_pagination.html" %}
+  <!-- Pagination -->
+  {% include "partials/Responses/responses_pagination.html" %}
+</div>

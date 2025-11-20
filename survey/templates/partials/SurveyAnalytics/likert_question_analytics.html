@@ -1,0 +1,41 @@
+{% load static %}
+<div class="card bg-white shadow-lg border border-gray-200">
+    <div class="card-body">
+        <h3 class="text-xl font-semibold mb-4">{{ data.question.label }}</h3>
+        
+        <!-- Likert Scale Analytics -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div>
+                <div class="stat">
+                    <div class="stat-title">Average Rating</div>
+                    <div class="stat-value text-primary">{{ data.average }}</div>
+                    <div class="stat-desc">out of {{ data.question.scale_max }}</div>
+                </div>
+                
+                <div class="mt-4 space-y-2">
+                    <h4 class="font-semibold text-gray-700">Rating Distribution</h4>
+                    {% for rating, count in data.distribution.items %}
+                    <div class="flex items-center gap-3">
+                        <span class="w-12 text-sm font-medium">{{ rating }}</span>
+                        <div class="flex-1">
+                            <div class="w-full bg-gray-200 rounded-full h-6">
+                                <div class="bg-primary h-6 rounded-full flex items-center justify-end pr-2 text-white text-xs font-semibold"
+                                     style="width: {% if total_responses > 0 %}{{ count|add:0|stringformat:"d" }}00|divideby:{{ total_responses }}{% else %}0{% endif %}%">
+                                    {{ count }}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            
+            <div>
+                <canvas id="chart-{{ data.question.id }}" 
+                        data-question-id="{{ data.question.id }}"
+                        data-survey-uuid="{{ survey.uuid }}"
+                        class="w-full h-64"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
