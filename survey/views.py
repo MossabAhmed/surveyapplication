@@ -154,7 +154,9 @@ def Responses(request, page_number=1):
     is_htmx = request.headers.get('HX-Request') == 'true'
     
     if is_htmx:
-        return render(request, 'partials/Responses/responses_table_with_oob.html', context)
+        # عند طلب htmx، نرسل فقط الجزء الذي يحتاج إلى التحديث، وهو الجدول وشريط التنقل
+        # هذا الملف هو الذي يحتوي على الحاوية (#responses-table-and-pagination-container)
+        return render(request, 'partials/Responses/responses_table_body.html', context)
     
     return render(request, 'Responses.html', context)
 
@@ -178,6 +180,12 @@ def SurveyResponseDetail(request, uuid):
         'total_responses': total_responses,
         'page': page,
     }
+    
+    is_htmx = request.headers.get('HX-Request') == 'true'
+    
+    if is_htmx:
+        # عند طلب htmx، نرسل فقط الجزء الذي يحتاج إلى التحديث (الجدول وشريط التنقل)
+        return render(request, 'partials/SurveyResponseDetail/survey_responses_table_and_pagination.html', context)
     
     return render(request, 'SurveyResponseDetail.html', context)
 
