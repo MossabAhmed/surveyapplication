@@ -16,7 +16,7 @@
       <button
         {% if not page.has_previous %}disabled{% endif %}
         {% if page.has_previous %}
-        hx-get="{% url 'Responses_Page' page.number|add:-1 %}{% if query %}?search={{ query }}{% endif %}"
+        hx-get="{% url 'Responses_Page' page.number|add:-1 %}{% if query %}?search={{ query }}{% endif %}{% if state_filter %}&state_filter={{ state_filter }}{% endif %}{% if responses_filter %}&responses_filter={{ responses_filter }}{% endif %}{% if date_filter %}&date_filter={{ date_filter }}{% endif %}"
         hx-push-url="true"
         hx-target="#responses-table-and-pagination-container"
         hx-swap="outerHTML"
@@ -42,7 +42,7 @@
     {% for page_number in page.paginator.page_range %}
     <li>
       <button
-        hx-get="{% url 'Responses_Page' page_number %}{% if query %}?search={{ query }}{% endif %}"
+        hx-get="{% url 'Responses_Page' page_number %}{% if query %}?search={{ query }}{% endif %}{% if state_filter %}&state_filter={{ state_filter }}{% endif %}{% if responses_filter %}&responses_filter={{ responses_filter }}{% endif %}{% if date_filter %}&date_filter={{ date_filter }}{% endif %}"
         hx-push-url="true"
         hx-target="#responses-table-and-pagination-container"
         hx-swap="outerHTML"
@@ -56,7 +56,7 @@
       <button
         {% if not page.has_next %}disabled{% endif %}
         {% if page.has_next %}
-        hx-get="{% url 'Responses_Page' page.number|add:1 %}{% if query %}?search={{ query }}{% endif %}"
+        hx-get="{% url 'Responses_Page' page.number|add:1 %}{% if query %}?search={{ query }}{% endif %}{% if state_filter %}&state_filter={{ state_filter }}{% endif %}{% if responses_filter %}&responses_filter={{ responses_filter }}{% endif %}{% if date_filter %}&date_filter={{ date_filter }}{% endif %}"
         hx-push-url="true"
         hx-trigger="click"
         hx-target="#responses-table-and-pagination-container"
