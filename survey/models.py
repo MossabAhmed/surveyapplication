@@ -85,16 +85,6 @@ class MultiChoiceQuestion(Question):
     the_minimum_number_of_options_to_be_selected = models.IntegerField(default=1)
     NAME = "Multi-Choice Question"
 
-    def add_Option(self, option):
-        if not self.options:
-            self.options = []
-        self.options.append(option)
-        self.save()
-
-    def remove_Option(self, option):
-        if self.options and option in self.options:
-            self.options.remove(option)
-            self.save()
 
     def get_answer_distribution(self):
         """Get distribution of answers for this question"""
@@ -112,15 +102,9 @@ class MultiChoiceQuestion(Question):
         return distribution
 
 class LikertQuestion(Question):
-    scale_max = models.IntegerField(
-        default=3,
-        help_text="Max value must be positive (min is always 1)."
-    )
     options = models.JSONField(default=list)
 
     NAME = "Likert Question"
-
-
 
     def get_average_rating(self):
         """Calculate average rating for this question"""

@@ -5,7 +5,8 @@ from django.db.models import Q, Count, Avg
 from django.db import transaction
 from django.core.paginator import Paginator
 from .models import Question as que, Survey, Response, Answer, MultiChoiceQuestion, LikertQuestion, CustomUser, Question
-from .forms import MultiChoiceQuestionForm, SurveyForm, MultiFormset, LikertQuestionForm, LikertFormset
+from .forms import MultiChoiceQuestionForm, SurveyForm,  LikertQuestionForm,  QuestionFormSet
+from django.contrib.contenttypes.models import ContentType
 from django.views import View
 from django.views.generic import CreateView, UpdateView, DeleteView, DetailView
 from django.shortcuts import redirect
@@ -15,75 +16,53 @@ class SurveyCreateView(CreateView):
     model = Survey
     form_class = SurveyForm
     template_name = 'CreateSurvey.html'
-    success_url = '/Dashboard'
+    success_url = '/Dashboard'  
 
     def get_context_data(self, **kwargs):
+        """
+        Adds the formset to the template context.
+        """
         context = super().get_context_data(**kwargs)
         context['question_type_list'] = que.get_available_type_names()
         context['question_count'] = 0 
 
         if self.request.POST:
-            context["multi_formset"] = MultiFormset(self.request.POST, prefix="multi")
-            context["likert_formset"] = LikertFormset(self.request.POST, prefix="likert")
-            
-            MultiFS = MultiFormset(self.request.POST, prefix="multi")
-            LikertFS = LikertFormset(self.request.POST, prefix="likert")
+            # If submitting, bind Context to the formset
 
-            if MultiFS.is_valid() and LikertFS.is_valid():
-                # save multichoice
-                for form in MultiFS:
-                    if form.cleaned_data:
-                        data = form.cleaned_data
-                        # create question model
-                        ...
 
-                # save likert
-                for form in LikertFS:
-                    if form.cleaned_data:
-                        data = form.cleaned_data
-                        # create question model
-                ...
-
+            context['Question_formset'] = QuestionFormSet(self.request.POST)
         else:
-            # For a GET request, create empty formsets
-            context["multi_formset"] = MultiFormset(prefix="multi")
-            context["likert_formset"] = LikertFormset(prefix="likert")
+            # If GET, create an empty formset
+            context['Question_formset'] = QuestionFormSet()
 
         return context
 
     def form_valid(self, form):
-        # This method is called when the main survey form is valid.
-        # We also need to validate our formsets here.
-        multi_formset = MultiFormset(self.request.POST, prefix="multi")
-        likert_formset = LikertFormset(self.request.POST, prefix="likert")
+        """
+            Called if the SurveyForm is valid. 
+            We must also validate and save the FormSet here.
+        """
+        context = self.get_context_data()
+        formset = context['Question_formset']
 
-        if multi_formset.is_valid() and likert_formset.is_valid():
+        if formset.is_valid():
+            # Use a transaction to ensure Survey and Questions are saved together
+            # or rolled back if something fails.
             with transaction.atomic():
+                # 1. Save the Survey (Parent)
                 self.object = form.save(commit=False)
-                
-                # TODO : Get the logged in user
-                self.object.created_by = CustomUser.objects.first() 
-                self.object.question_count = len(multi_formset) + len(likert_formset)
+                self.object.created_by = CustomUser.objects.first()
+                self.object.question_count = formset.total_form_count()
                 self.object.save()
-
-                for multi_form in multi_formset:
-                    if multi_form.cleaned_data:
-                        question = multi_form.save(commit=False)
-                        question.survey = self.object
-                        question.save()
-                    
-                for likert_form in likert_formset:
-                    if likert_form.cleaned_data:
-                        question = likert_form.save(commit=False)
-                        question.survey = self.object
-                        question.save()
-
-            return redirect(self.get_success_url())
+                
+                # 2. Link the FormSet to the newly created Survey
+                formset.instance = self.object
+                
+                formset.save()
+                
+            return  redirect(self.get_success_url()) # Redirects to success_url
         else:
-            # If formsets are not valid, re-render the form with errors
-            return self.form_invalid(form)
-
-
+            return self.form_invalid(form)  
         
 
 class AddQuestionFormView(View):
@@ -91,6 +70,9 @@ class AddQuestionFormView(View):
         # Get the question index (count) from the POST data.
         # This value represents the current number of questions *before* adding the new one,
         # and will be used as the index for the new formset prefix.
+        question_count_position = request.POST.get('question_count_position')
+
+        # to get the count of the question even if there question been deleted 
         question_index_str = request.POST.get('question_count')
         question_index = int(question_index_str) if question_index_str else 0
         type_count_str = request.POST.get('type_count')
@@ -101,22 +83,26 @@ class AddQuestionFormView(View):
         if question_type_name not in Question.get_available_type_names():
             return HttpResponse("Invalid question type provided.", status=400)
         
-        # Map question type names to their form classes and formset prefixes
-        form_map = {
-            "Multi-Choice Question": (MultiChoiceQuestionForm, "multi"),
-            "Likert Question": (LikertQuestionForm, "likert"),
+        # Map question type names to their corresponding Model and Form classes
+        ModelFormMap = {
+           'Multi-Choice Question': MultiChoiceQuestionForm,
+            'Likert Question': LikertQuestionForm,
         }
 
-        FormClass, prefix = form_map[question_type_name]
-        # The new form will have an index equal to the current count.
-        form_instance = FormClass(prefix=f"{prefix}-{type_count}")
+        FormClass = ModelFormMap[question_type_name]
+
+        form = FormClass(
+            prefix=f'questions-{question_index - 1}', 
+            initial={
+                'question_type': question_type_name, 
+                'position': question_index,
+            }
+        )
 
         template_name = question_type_name.replace(' ', '_')
         context = {
-            'question_count': question_index, # Pass the index back if the partial needs it, though not strictly for the prefix
-            'form': form_instance,
-            'question_type_name': question_type_name, # Also pass this for potential frontend logic
-
+            'question_count': question_count_position, # Pass the index back if the partial needs it, though not strictly for the prefix
+            'form': form,
         }
         return render(request, f'partials/Create_survey/Questions/{template_name}.html', context)
 
