@@ -4,6 +4,8 @@ from django.views.decorators.http import require_POST
 from django.db.models import Q, Count, Avg
 from django.db import transaction
 from django.core.paginator import Paginator
+from django.utils import timezone
+from datetime import timedelta
 from .models import Question as que, Survey, Response, Answer, MultiChoiceQuestion, LikertQuestion, CustomUser
 from .forms import MultiChoiceQuestionForm, SurveyForm, MultiFormset
 from django.views import View
@@ -120,16 +122,41 @@ def Index(request, page_number=1):
     return render(request, 'index.html', context)
 
 def Responses(request, page_number=1):
-    """Main responses view showing all surveys with response counts"""
+    """Main responses view showing all surveys with response counts and filters"""
+    
+    # Get filters and search query
     query = request.GET.get('search', '').strip()
+    state_filter = request.GET.get('state_filter', '').strip()
+    responses_filter = request.GET.get('responses_filter', '').strip()
+    date_filter = request.GET.get('date_filter', '').strip()
     
     # Base queryset with response counts
-    base_surveys = Survey.objects.annotate(
+    surveys = Survey.objects.annotate(
         responses_count=Count('responses')
-    ).filter(state='published')
+    )
     
-    surveys = base_surveys
+    # 0. Apply Date Filter (based on last_updated)
+    from datetime import timedelta
+    from django.utils import timezone
     
+    if date_filter == 'last_7_days':
+        surveys = surveys.filter(last_updated__gte=timezone.now() - timedelta(days=7))
+    elif date_filter == 'last_30_days':
+        surveys = surveys.filter(last_updated__gte=timezone.now() - timedelta(days=30))
+    elif date_filter == 'last_90_days':
+        surveys = surveys.filter(last_updated__gte=timezone.now() - timedelta(days=90))
+    
+    # 1. Apply State Filter
+    if state_filter in ['published', 'draft', 'closed']:
+        surveys = surveys.filter(state=state_filter)
+    
+    # 2. Apply Responses Count Filter
+    if responses_filter == 'has_responses':
+        surveys = surveys.filter(responses_count__gt=0)
+    elif responses_filter == 'no_responses':
+        surveys = surveys.filter(responses_count=0)
+    
+    # 3. Apply Search Query
     if query:
         surveys = surveys.filter(
             Q(title__icontains=query) |
@@ -138,8 +165,10 @@ def Responses(request, page_number=1):
     
     surveys = surveys.order_by('-last_updated')
     
-    # Get recent surveys with responses (not affected by search filters)
-    recent_surveys_with_responses = base_surveys.filter(responses_count__gt=0).order_by('-last_updated')[:4]
+    # Get recent surveys with responses (not affected by search/filters for the card section)
+    recent_surveys_with_responses = Survey.objects.annotate(
+        responses_count=Count('responses')
+    ).filter(responses_count__gt=0).order_by('-last_updated')[:4]
     
     # Pagination
     paginator = Paginator(surveys, 10)
@@ -148,6 +177,9 @@ def Responses(request, page_number=1):
     context = {
         'page': page,
         'query': query,
+        'state_filter': state_filter,
+        'responses_filter': responses_filter,
+        'date_filter': date_filter,
         'recent_surveys': recent_surveys_with_responses,
     }
     
