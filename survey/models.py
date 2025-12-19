@@ -112,7 +112,7 @@ class LikertQuestion(Question):
         if not answers.exists():
             return 0
         
-        total = sum(float(answer.answer_data) for answer in answers)
+        total = sum(float(answer.answer_data['position']) for answer in answers)
         return round(total / answers.count(), 2)
     
     def get_rating_distribution(self):
