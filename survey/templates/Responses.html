@@ -11,9 +11,9 @@
     <div
       class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4"
     >
-      {% for survey in recent_surveys %} {% include
-      "partials/Responses/survey_response_card.html" with survey=survey %} {%
-      empty %}
+      {% for survey in recent_surveys %} 
+        {% include "partials/Responses/survey_response_card.html" with survey=survey %} 
+        {% empty %}
       <div class="col-span-full text-center py-8 text-gray-500">
         No surveys with responses yet
       </div>
