@@ -130,6 +130,13 @@ class LikertQuestion(Question):
         
         return distribution
 
+class MatrixQuestion(Question):
+    rows = models.JSONField(default=list)
+    columns = models.JSONField(default=list)
+
+    NAME = "Matrix Question"
+
+    
 
 class Response(models.Model):
     survey = models.ForeignKey(Survey, on_delete=models.CASCADE, related_name='responses')

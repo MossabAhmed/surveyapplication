@@ -128,76 +128,57 @@ class LikertQuestionForm(BaseQuestionForm):
             )
 
         return cleaned_data
-    
-# class SurveyQuestionFormSet(BaseInlineFormSet):
-#     """
-#         A custom FormSet that handles multiple question types (Polymorphism)
-#         and manages the ordering/indexing.
-#     """
-#     def _construct_form(self, i, **kwargs):
-#         # 1. Let the parent build the default form (BaseQuestionForm) first.
-#         #    This calculates all the prefixes, instances, and data binding for us.
-#         form = super()._construct_form(i, **kwargs)
 
-#         # 2. Determine the Desired Class (Polymorphism)
-#         desired_class = self.get_desired_form_class(form, i)
-
-#         # 3. If the form created is not the type we want, Re-build it!
-#         if not isinstance(form, desired_class):
-#             # Extract the standard arguments from the already built form
-#             new_form = desired_class(
-#                 data=form.data if self.is_bound else None,
-#                 files=form.files if self.is_bound else None,
-#                 auto_id=form.auto_id,
-#                 prefix=form.prefix,
-#                 initial=form.initial,
-#                 error_class=self.error_class,
-#                 empty_permitted=form.empty_permitted,
-#                 instance=form.instance, # Pass the model instance
-#                 use_required_attribute=False if form.empty_permitted else self.use_required_attribute,
-
-
-#                 renderer=self.renderer
-#             )
-#             return new_form
+class MatrixQuestionForm(BaseQuestionForm):
+    polymorphic_ctype = forms.IntegerField(widget=forms.HiddenInput())
+    def __init__(self, *args, **kwargs):
+        """
+        Override __init__ to dynamically set the initial value for 'polymorphic_ctype'.
+        """
+        super().__init__(*args, **kwargs)
+        ctype = ContentType.objects.get_for_model(self._meta.model)
+        print("ctype.id", ctype.id)
         
-#         return form
+        self.initial['polymorphic_ctype'] = ctype.id
+        
 
-#     def get_desired_form_class(self, form, i):
-#         """
-#         Helper logic to decide if we need MultiChoice, Likert, or Base.
-#         """
-#         # Case A: Submitting Data (POST) -> Check hidden 'question_type' field
-#         if self.data:
-#             # Use the specific prefix of the form to find the correct input field
-#             # name format: "questions-0-question_type"
-#             type_key = f"{form.prefix}-question_type"
-#             type_value = self.data.get(type_key)
-            
-#             if type_value == 'Multi-Choice Question':
-#                 return MultiChoiceQuestionForm
-#             elif type_value == 'Likert Question':
-#                 return LikertQuestionForm
+    class Meta(BaseQuestionForm.Meta):
+        model = models.MatrixQuestion
+        fields = BaseQuestionForm.Meta.fields + ['rows', 'columns']
+        widgets = {
+            **BaseQuestionForm.Meta.widgets,
+            'rows': forms.HiddenInput(),    
+            'columns': forms.HiddenInput(),  
+        }
 
-#         # Case B: Existing Data (GET/Edit) -> Check the database instance
-#         elif form.instance and form.instance.pk:
-#             # Check for Child Models using hasattr (Django Inheritance)
-#             if hasattr(form.instance, 'multichoicequestion'):
-#                 return MultiChoiceQuestionForm
-#             elif hasattr(form.instance, 'likertquestion'):
-#                 return LikertQuestionForm
+    def clean(self):
+        cleaned_data = super().clean()
+        rows = cleaned_data.get('rows')
+        columns = cleaned_data.get('columns')
 
-#         # Default fallback
-#         return BaseQuestionForm 
+        if not rows:
+            self.add_error(
+                'rows',
+                "The Rows fields are required for a Matrix question."
+            )
+        if len(rows) <= 1:
+            self.add_error(
+                'rows',
+                "At least two rows are required for a Matrix question.",
+            )
+        if not columns:
+            self.add_error(
+                'columns',
+                "The Columns fields are required for a Matrix question."
+            )
+        elif len(columns) <= 1:
+            self.add_error(
+                'columns',
+                "At least two columns are required for a Matrix question.",
+            )
 
-# QuestionFormSetFactory = inlineformset_factory(
-#     parent_model=models.Survey,
-#     model=models.Question, # Point to parent model
-#     formset=SurveyQuestionFormSet, # Use our custom polymorphic class
-#     form=BaseQuestionForm, # Default fallback form
-#     extra=0,
-#     can_delete=True,
-# )
+
+        return cleaned_data
 
 
 QuestionFormSet = polymorphic_inlineformset_factory(
@@ -206,6 +187,7 @@ QuestionFormSet = polymorphic_inlineformset_factory(
     formset_children=(
         PolymorphicFormSetChild(models.MultiChoiceQuestion, MultiChoiceQuestionForm),
         PolymorphicFormSetChild(models.LikertQuestion, LikertQuestionForm),
+        PolymorphicFormSetChild(models.MatrixQuestion, MatrixQuestionForm)
     ),
     extra=0,
     can_delete=True,

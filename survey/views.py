@@ -5,7 +5,7 @@ from django.db.models import Q, Count, Avg
 from django.db import transaction
 from django.core.paginator import Paginator
 from .models import Question as que, Survey, Response, Answer, MultiChoiceQuestion, LikertQuestion, CustomUser, Question
-from .forms import MultiChoiceQuestionForm, SurveyForm,  LikertQuestionForm,  QuestionFormSet
+from .forms import MultiChoiceQuestionForm, SurveyForm,  LikertQuestionForm,  QuestionFormSet, MatrixQuestionForm 
 from django.contrib.contenttypes.models import ContentType
 from django.utils import timezone
 from datetime import timedelta
@@ -81,12 +81,10 @@ class AddQuestionFormView(View):
         # Get the question index (count) from the POST data.
         # This value represents the current number of questions *before* adding the new one,
         # and will be used as the index for the new formset prefix.
-        question_count_position = request.POST.get('question_count_position')
-
-        # to get the count of the question even if there question been deled 
-        question_index_str = request.POST.get('question_count')
+        question_index_str = request.POST.get('question_count_position')
 
         question_index = int(question_index_str) if question_index_str else 0
+        print("question_index:", question_index)
 
         question_type_name = request.POST.get('question_type')      
   
@@ -97,12 +95,14 @@ class AddQuestionFormView(View):
         ModelFormMap = {
            'Multi-Choice Question': MultiChoiceQuestionForm,
             'Likert Question': LikertQuestionForm,
+            'Matrix Question': MatrixQuestionForm
         }
 
+        print(question_type_name)
         FormClass = ModelFormMap[question_type_name]
 
         form = FormClass(
-            prefix=f'questions-{question_index - 1}', 
+            prefix=f'questions-{question_index}', 
             initial={
                 'question_type': question_type_name, 
                 'position': question_index,
@@ -111,7 +111,7 @@ class AddQuestionFormView(View):
 
         template_name = question_type_name.replace(' ', '_')
         context = {
-            'question_count': question_count_position, # Pass the index back if the partial needs it, though not strictly for the prefix
+            'question_count': question_index + 1, # Pass the index back if the partial needs it, though not strictly for the prefix
             'form': form,
         }
         return render(request, f'partials/Create_survey/Questions/{template_name}.html', context)
