@@ -77,6 +77,10 @@ class MultiChoiceQuestionForm(BaseQuestionForm):
                 self.add_error(
                     'the_minimum_number_of_options_to_be_selected',
                     "The minimum number of required options cannot be greater than the total number of available options.",)
+            elif min_selected < 0:
+                self.add_error(
+                    'the_minimum_number_of_options_to_be_selected',
+                    "The minimum number of required options cannot be negative.",)
             
         return cleaned_data
 
