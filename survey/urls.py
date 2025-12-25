@@ -14,6 +14,7 @@ urlpatterns = [
     path('responses', views.Responses, name='Responses'),
     path('responses/<int:page_number>', views.Responses, name='Responses_Page'),
     path('responses/survey/<uuid:uuid>', views.SurveyResponseDetail, name='SurveyResponseDetail'),
+    path('responses/survey/<uuid:uuid>/overview', views.SurveyResponsesOverviewTable, name='SurveyResponsesOverviewTable'),
     path('responses/survey/<uuid:uuid>/analytics', views.SurveyAnalytics, name='SurveyAnalytics'),
 
     # API endpoint for chart data

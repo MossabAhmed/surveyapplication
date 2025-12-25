@@ -101,6 +101,26 @@ class MultiChoiceQuestion(Question):
         
         return distribution
 
+    def get_numeric_answer(self, answer_data):
+        """Convert answer text to numeric value based on option index"""
+        if not answer_data:
+            return ""
+        
+        options = self.options
+        
+        def get_index(val):
+            try:
+                # Return 1-based index
+                return str(options.index(val) + 1)
+            except ValueError:
+                return "0"
+        
+        if isinstance(answer_data, list):
+            return ", ".join([get_index(item) for item in answer_data])
+        else:
+            return get_index(answer_data)
+
+
 class LikertQuestion(Question):
     options = models.JSONField(default=list)
     scale_max = models.IntegerField(default=5)
@@ -153,6 +173,20 @@ class LikertQuestion(Question):
                 continue
         
         return distribution
+
+    def get_numeric_answer(self, answer_data):
+        """Convert answer to numeric value"""
+        if not answer_data:
+            return ""
+        
+        try:
+            if isinstance(answer_data, dict) and 'position' in answer_data:
+                return str(int(float(answer_data['position'])))
+            else:
+                return str(int(float(answer_data)))
+        except (ValueError, TypeError, KeyError):
+            return ""
+
 
 
 class Response(models.Model):

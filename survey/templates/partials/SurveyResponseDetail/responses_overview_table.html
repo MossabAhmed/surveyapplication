@@ -1,0 +1,117 @@
+<div
+  class="overflow-x-auto rounded-xl border border-gray-200 shadow-sm bg-white"
+>
+  <table class="table w-full">
+    <thead
+      class="bg-gray-50 text-gray-800 text-xs uppercase font-bold tracking-wider"
+    >
+      <tr>
+        <th class="px-4 py-3 border-b border-gray-200 bg-gray-50">#</th>
+        <th class="px-4 py-3 border-b border-gray-200 bg-gray-50">
+          Respondent
+        </th>
+        <th class="px-4 py-3 border-b border-gray-200 bg-gray-50">Date</th>
+        {% for question in questions %}
+        <th
+          class="px-4 py-3 border-b border-gray-200 text-center min-w-[60px] bg-gray-50"
+          title="{{ question.label }}"
+        >
+          <div class="flex flex-col items-center justify-center h-full">
+            <span class="text-primary font-extrabold text-base"
+              >Q{{ forloop.counter }}</span
+            >
+          </div>
+        </th>
+        {% endfor %}
+      </tr>
+    </thead>
+    <tbody class="text-sm divide-y divide-gray-100">
+      {% for row in table_data %}
+      <tr class="hover:bg-blue-50/30 transition-colors group">
+        <td
+          class="px-4 py-3 font-medium text-gray-400 group-hover:text-gray-600"
+        >
+          {{ forloop.counter }}
+        </td>
+        <td class="px-4 py-3">
+          {% if row.response.respondent %}
+          <div class="flex items-center gap-6">
+            <div
+              class="h-10 w-10 rounded-full bg-white border-2 border-indigo-100 flex items-center justify-center text-indigo-700 font-bold text-base shadow-md"
+            >
+              {{ row.response.respondent.username|slice:":1"|upper }}
+            </div>
+            <span class="font-semibold text-gray-700"
+              >{{ row.response.respondent.username }}</span
+            >
+          </div>
+          {% else %}
+          <div class="flex items-center gap-3">
+            <div
+              class="h-9 w-9 rounded-full bg-gray-100 flex items-center justify-center text-gray-400 ring-1 ring-gray-200 shadow-sm"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                class="h-5 w-5"
+                viewBox="0 0 20 20"
+                fill="currentColor"
+              >
+                <path
+                  fill-rule="evenodd"
+                  d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z"
+                  clip-rule="evenodd"
+                />
+              </svg>
+            </div>
+            <span class="italic text-gray-400">Anonymous</span>
+          </div>
+          {% endif %}
+        </td>
+        <td class="px-4 py-3 whitespace-nowrap text-gray-500 text-xs font-mono">
+          {{ row.response.created_at|date:"Y-m-d H:i" }}
+        </td>
+        {% for cell in row.cells %}
+        <td class="text-center px-4 py-3 border-l border-gray-50">
+          {% if cell != "-" %}
+          <span
+            class="inline-flex items-center justify-center min-w-[2rem] h-8 px-2 rounded-lg text-sm font-bold bg-white border border-gray-200 text-gray-700 shadow-sm font-mono whitespace-nowrap"
+          >
+            {{ cell }}
+          </span>
+          {% else %}
+          <span class="text-gray-300">-</span>
+          {% endif %}
+        </td>
+        {% endfor %}
+      </tr>
+      {% empty %}
+      <tr>
+        <td
+          colspan="{{ questions.count|add:3 }}"
+          class="text-center py-12 text-gray-500 bg-gray-50"
+        >
+          <div class="flex flex-col items-center justify-center">
+            <div class="bg-gray-100 p-3 rounded-full mb-3">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                class="h-6 w-6 text-gray-400"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                />
+              </svg>
+            </div>
+            <p class="font-medium">No responses found.</p>
+          </div>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
