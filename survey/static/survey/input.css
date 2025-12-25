@@ -44,3 +44,19 @@
 .position-fixed {
   position: fixed;
 }
+@keyframes wiggle {
+  0%,
+  100% {
+    transform: rotate(0deg);
+  }
+  25% {
+    transform: rotate(-15deg);
+  }
+  75% {
+    transform: rotate(15deg);
+  }
+}
+/* Apply animation to the icon when the button (group) is hovered */
+.wiggle:hover .wiggle-icon {
+  animation: wiggle 0.3s ease-in-out infinite;
+}

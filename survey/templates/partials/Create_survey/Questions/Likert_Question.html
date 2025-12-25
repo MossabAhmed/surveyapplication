@@ -47,13 +47,24 @@
                     <label class="block text-sm font-bold text-gray-700 uppercase tracking-wide">
                         Scale Options
                     </label>
-                    
-                    <!-- Quick Load Button -->
-                    <button type="button" 
+                    <!-- Quick Load Buttons -->
+                    <div class="flex justify-end gap-4">
+                        <!-- Delete All Options Button -->  
+                        <button type="button" 
+                                x-show="options.length > 0"
+                                @click="options = []"
+                                class="wiggle cursor-pointer text-xs text-red-500 hover:text-red-700 hover:underline font-semibold flex items-center gap-1 transition-colors">
+                                <i class="fa-solid fa-trash-can text-[10px] wiggle-icon"></i> 
+                            Delete
+                        </button>
+
+                        <!-- Load Scale Button -->
+                        <button type="button" 
                             @click="options = ['Strongly Disagree', 'Disagree', 'Neutral', 'Agree', 'Strongly Agree']"
-                            class="text-xs text-primary hover:text-primary-focus hover:underline font-semibold flex items-center gap-1">
-                        <i class="fa-solid fa-magic text-[10px]"></i> Load 1-5 Scale
-                    </button>
+                            class="text-xs text-primary cursor-pointer hover:text-primary-focus hover:underline font-semibold flex items-center gap-1">
+                            <i class="fa-solid fa-magic text-[10px]"></i> Load 1-5 Scale
+                        </button>
+                    </div>
                 </div>
 
                 <!-- The List -->
