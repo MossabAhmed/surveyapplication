@@ -48,6 +48,23 @@ class SurveyCreateView(CreateView):
 
         return super().post(request, *args, **kwargs)
     
+
+    def get(self, request, *args, **kwargs):
+        # Check for backup data in session
+        backup_data = request.session.get('survey_backup_data')
+        if request.GET.get('action') == 'edit' and  backup_data:
+            # If backup data exists, use it to pre-fill the form and formset
+            form = SurveyForm(backup_data)
+            question_formset = QuestionFormSet(backup_data)
+            context ={
+                'form': form,
+                'Question_formset': question_formset,
+                'question_type_list': que.get_available_type_names(),
+            }
+            return render(request, self.template_name, context)
+        else:
+            return super().get(request, *args, **kwargs)
+
     def form_valid(self, form):
         """
             Called if the SurveyForm is valid. 
@@ -71,6 +88,8 @@ class SurveyCreateView(CreateView):
                 
                 formset.save()
                 
+            if 'survey_backup_data' in self.request.session:
+                 del self.request.session['survey_backup_data']
             return  redirect(self.get_success_url()) # Redirects to success_url
         else:
             return self.form_invalid(form)  
@@ -105,16 +124,46 @@ class AddQuestionFormView(View):
             prefix=f'questions-{question_index}', 
             initial={
                 'question_type': question_type_name, 
-                'position': question_index,
+                'position': question_index + 1,
             }
         )
 
         template_name = question_type_name.replace(' ', '_')
         context = {
-            'question_count': question_index + 1, # Pass the index back if the partial needs it, though not strictly for the prefix
+            # 'question_count': question_index + 1, # Pass the index back if the partial needs it, though not strictly for the prefix
             'form': form,
         }
         return render(request, f'partials/Create_survey/Questions/{template_name}.html', context)
+
+def preview_survey_data(request):
+    """View to preview survey data before publishing"""
+    if request.method == 'POST':
+        data = normalize_formset_indexes(request.POST, prefix="questions")
+        request._post = data
+        request.session['survey_backup_data'] = request.POST.copy()
+
+        form = SurveyForm(request.POST)
+        question_formset = QuestionFormSet(request.POST)
+
+        if form.is_valid() and question_formset.is_valid():
+            survey = form.save(commit=False)
+            questions = question_formset.save(commit=False)
+
+            context = {
+                'survey': survey,
+                'questions': questions,
+            }
+            return render(request, 'Survey_preview.html', context)
+        else:
+            # If the form or formset is invalid, re-render the CreateSurvey page with errors
+            context = {
+                'form': form,
+                'Question_formset': question_formset,
+                'question_type_list': que.get_available_type_names(),
+            }
+            return render(request, 'CreateSurvey.html', context)
+    else:
+        return HttpResponse(status=405)  # Method Not Allowed
 
 def Index(request, page_number=1):
     query = request.GET.get('search', '').strip()

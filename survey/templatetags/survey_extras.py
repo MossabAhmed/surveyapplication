@@ -1,4 +1,6 @@
 from django import template
+import random
+
 
 register = template.Library()
 
@@ -18,3 +20,15 @@ def get_surveys(value):
         return value.object_list
     # If it's already a list or queryset
     return value
+
+@register.filter
+def shuffle_if(seq, condition):
+    """Shuffle if condition is True, otherwise return original"""
+    if condition:
+        try:
+            result = list(seq)[:] 
+            random.shuffle(result)
+            return result
+        except:
+            return seq
+    return seq

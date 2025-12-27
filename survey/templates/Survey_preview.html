@@ -1,0 +1,192 @@
+
+{% extends "base.html" %}
+{% load survey_extras %}
+
+{% load static %}
+{% block navbar %}
+<!-- Custom Navbar for Preview Page -->
+<div class="navbar bg-white/90 backdrop-blur-md border-b border-slate-200 sticky top-0 z-50 px-4 sm:px-6">
+    <!-- Left Side: Go Back -->
+    <div class="navbar-start">
+        <a href="{% url 'CreateSurvey' %}?action=edit" 
+        class="btn btn-secondary btn-sm gap-2 rounded-full font-medium shadow-sm hover:shadow-md transition-all">
+            <i class="fa-solid fa-arrow-left"></i>
+            Go Back
+        </a>
+    </div>
+        <!-- Center: Title (Optional) -->
+    <div class="navbar-center hidden sm:flex">
+        <span class="font-bold text-slate-700 text-lg">
+            Survey Preview
+        </span>
+    </div>
+    <!-- Right Side: Close Button -->
+    <div class="navbar-end">
+        <button onclick="window.close()" class="btn btn-sm btn-ghost text-slate-500">Close Preview</button>
+    </div>
+</div>
+{% endblock navbar %}
+
+{% block content %}
+<div class="min-h-screen bg-slate-50 py-12 px-4 sm:px-6">
+    
+    <div class="max-w-3xl mx-auto space-y-6">
+        
+        <!-- Preview Banner -->
+        <div class="alert bg-blue-50 border-blue-100 text-blue-800 shadow-sm rounded-lg flex items-center justify-center gap-3">
+            <i class="fa-solid fa-eye"></i>
+            <span class="font-medium text-sm">Preview Mode: Responses will not be saved.</span>
+        </div>
+
+        <!-- Survey Title Card -->
+        <div class="card bg-white shadow-sm border border-slate-200 rounded-t-xl overflow-hidden">
+            <div class="h-2 w-full bg-primary"></div> <!-- Top Accent Line -->
+            <div class="card-body p-8 sm:p-10">
+                <h1 class="text-4xl font-extrabold text-slate-800 tracking-tight">{{ survey.title }}</h1>
+                {% if survey.description %}
+                    <p class="mt-4 text-lg text-slate-500 leading-relaxed whitespace-pre-wrap">{{ survey.description }}</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Questions Form -->
+        <form onsubmit="event.preventDefault();" class="space-y-6">
+            {% for q in questions|shuffle_if:survey.shuffle_questions %}
+            <div class="card bg-white shadow-sm border border-slate-200 rounded-xl hover:shadow-md transition-shadow duration-300">
+                <div class="card-body p-8">
+                    
+                    <!-- Header: Question Text & Badges -->
+                    <div class="flex flex-col gap-2 mb-6">
+                        <div class="flex items-start justify-between gap-4">
+                            <h3 class="text-xl font-semibold text-slate-800 leading-snug">
+                                <span class="text-slate-400 font-normal mr-1">{{ forloop.counter }}.</span> 
+                                {{ q.label }}
+                            </h3>
+                            {% if q.required %}
+                                <span class="badge badge-error badge-outline text-xs font-bold uppercase tracking-wide opacity-80 gap-1">
+                                    Required <span class="text-red-500">*</span>
+                                </span>
+                            {% endif %}
+                        </div>
+                        
+                        {% if q.helper_text %}
+                            <p class="text-slate-500 text-sm italic border-l-2 border-slate-200 pl-3 ml-1">
+                                {{ q.helper_text }}
+                            </p>
+                        {% endif %}
+                    </div>
+
+                    <!-- 1. MULTI-CHOICE (Modern Cards) -->
+                    {% if q.NAME == 'Multi-Choice Question' %}
+                        <div class="flex flex-col gap-3">
+                            {% for option in q.options|shuffle_if:q.randomize_options %}
+                            <!-- Label Container -->
+                            <!-- added 'has-[:checked]:...' to style the box when selected -->
+                            <label class="group relative flex items-start p-4 rounded-lg border border-slate-200 bg-white cursor-pointer transition-all duration-200 
+                                        hover:border-primary hover:bg-primary/5 
+                                        has-[:checked]:border-primary has-[:checked]:bg-primary/5 has-[:checked]:shadow-sm">
+                                
+                                <!-- Inputs (Direct children of label for better alignment) -->
+                                {% if q.allow_multiple %}
+                                    <input type="checkbox" 
+                                        name="q_{{ q.position }}" 
+                                        class="peer mt-0.5 toggle checkbox-primary checkbox-sm border-slate-300">
+                                {% else %}
+                                    <input type="radio" 
+                                        name="q_{{ q.position }}" 
+                                        class="peer mt-0.5 radio radio-primary radio-sm border-slate-300">
+                                {% endif %}
+
+                                <!-- Option Text -->
+                                <!-- 'peer-checked' makes text bold & primary color when the input above is checked -->
+                                <span class="ml-3 text-sm font-medium text-slate-700 transition-colors 
+                                            group-hover:text-primary-focus 
+                                            peer-checked:text-primary peer-checked:font-bold">
+                                    {{ option }}
+                                </span>
+                                
+                            </label>
+                            {% endfor %}
+                        </div>
+                    <!-- 2. LIKERT (Visual Scale) -->
+                    {% elif q.NAME == 'Likert Question' %}
+                        <div class="mt-4">
+                            <!-- Labels for Mobile (Stack) / Desktop (Row) -->
+                            <div class="flex flex-wrap sm:flex-nowrap justify-between items-center gap-4 py-4 px-2">
+                               {% for option in q.options %}
+                                <label class="flex flex-col items-center gap-3 w-full sm:w-auto cursor-pointer group">
+                                    <input type="radio" 
+                                        name="likert_{{ forloop.parentloop.counter }}" 
+                                        class="peer radio radio-primary radio-lg border-2 border-slate-300 group-hover:scale-110 group-hover:border-primary transition-all">
+                                    <span class="text-xs font-semibold text-slate-500 text-center uppercase tracking-wide group-hover:text-primary peer-checked:text-primary peer-checked:font-bold transition-colors">
+                                        {{ option }}
+                                    </span>
+                                </label>
+                                
+                                {% endfor %}
+                            </div>
+                        </div>
+
+                    <!-- 3. MATRIX (Clean Table) -->
+                    {% elif q.NAME == 'Matrix Question' %}
+                        <div class="overflow-x-auto -mx-4 sm:mx-0 rounded-lg border border-slate-100">
+                            <table class="table w-full">
+                                <!-- Head -->
+                                <thead class="bg-slate-50 border-b border-slate-200">
+                                    <tr>
+                                        <th class="min-w-[150px] bg-slate-50 text-slate-600 font-bold p-4"></th> 
+                                        {% for col in q.columns %}
+                                            <th class="text-center min-w-[80px] text-xs font-bold text-slate-500 uppercase tracking-wide p-4">
+                                                {{ col }}
+                                            </th>
+                                        {% endfor %}
+                                    </tr>
+                                </thead>
+                                <!-- Body -->
+                                <tbody>
+                                    {% for row in q.rows %}
+                                    <tr class="hover:bg-slate-50 transition-colors border-b border-slate-100 last:border-0">
+                                        <td class="font-medium text-slate-700 p-4 bg-white sticky left-0 sm:static shadow-sm sm:shadow-none z-10">
+                                            {{ row }}
+                                        </td>
+                                        {% for col in q.columns %}
+                                            <td class="text-center p-4">
+                                                <label class="cursor-pointer inline-flex items-center justify-center p-2 rounded-full hover:bg-slate-100">
+                                                    <input type="radio" 
+                                                           name="matrix_q{{ q.position }}_row{{ forloop.parentloop.counter }}" 
+                                                           class="radio radio-primary radio-sm">
+                                                </label>
+                                            </td>
+                                        {% endfor %}
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% endif %}
+
+                </div>
+            </div>
+            {% endfor %}
+            
+            <!-- Submit Action -->
+            <div class="card bg-white shadow-sm border border-slate-200 rounded-xl mt-8">
+                <div class="card-body p-6 flex flex-col sm:flex-row justify-between items-center gap-4">
+                    <p class="text-slate-400 text-sm">
+                        <i class="fa-regular fa-clock mr-1"></i> Never submit passwords through this form.
+                    </p>
+                    <button class="btn btn-primary btn-lg px-10 shadow-lg shadow-primary/30 hover:shadow-primary/50 w-full sm:w-auto rounded-full">
+                        Submit Survey
+                    </button>
+                </div>
+            </div>
+        </form>
+        
+        <!-- Branding Footer (Optional) -->
+        <div class="text-center py-6">
+            <span class="text-slate-300 text-xs font-semibold uppercase tracking-widest">Powered by koko Survey</span>
+        </div>
+
+    </div>
+</div>
+{% endblock %}

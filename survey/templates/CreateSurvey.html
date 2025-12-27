@@ -3,6 +3,7 @@
 {% block content %}
     {% comment %} post request in the viwe i use  "request.POST.get('question_count')" {% endcomment %}
     <form class="flex flex-row gap-4" method="POST" action="{% url 'CreateSurvey' %}"
+          id="survey-form"
           x-data="questionManager()"
           @question-deleted.window="handleDeletion($event)"
           @move-question="moveQuestion($event.detail.btn, $event.detail.direction)"
