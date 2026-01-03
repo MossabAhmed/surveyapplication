@@ -20,10 +20,10 @@
             Survey Preview
         </span>
     </div>
-    <!-- Right Side: Close Button -->
-    <div class="navbar-end">
-        <button onclick="window.close()" class="btn btn-sm btn-ghost text-slate-500">Close Preview</button>
-    </div>
+     <!-- Right Side: Close Button -->
+     <div class="navbar-end"> 
+         {% comment %} <button onclick="window.close()" class="btn btn-sm btn-ghost text-slate-500">Close Preview</button> {% endcomment %}
+    </div> 
 </div>
 {% endblock navbar %}
 
@@ -162,6 +162,59 @@
                                     {% endfor %}
                                 </tbody>
                             </table>
+                        </div>
+                    <!-- 4. RATING QUESTION (Numeric Scale) -->
+                    {% elif q.NAME == 'Rating Question' %}
+                        <!-- x-data: Independent state for this specific question -->
+                        <div class="mt-6 px-1" x-data="{ rating: null, hover: null }">
+                            
+                            <!-- Labels (Min/Max) -->
+                            <div class="flex justify-between items-end mb-4 px-1">
+                                <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">
+                                    {{ q.min_label|default:"Low" }}
+                                </span>
+                                <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">
+                                    {{ q.max_label|default:"High" }}
+                                </span>
+                            </div>
+
+                            <!-- Scale Container -->
+                            <!-- Increased gap-2 to gap-3 for more padding between options -->
+                            <div class="flex flex-wrap justify-center  gap-3" 
+                                 @mouseleave="hover = null">
+                                
+                                {% for i in q.range_min|get_range:q.range_max %}
+                                <label class="cursor-pointer group relative flex-1 min-w-[40px] max-w-[60px]"
+                                       @mouseenter="hover = {{ i }}">
+                                    
+                                    <!-- Hidden Radio Input linked to Alpine 'rating' -->
+                                    <input type="radio" 
+                                           name="q_{{ q.position }}" 
+                                           value="{{ i }}" 
+                                           x-model="rating"
+                                           class="sr-only">
+                                    
+                                    <!-- The Visual Box -->
+                                    <!-- Using Alpine :class for the Fill Effect -->
+                                    <div class="h-12 w-full rounded-lg border-2 flex items-center justify-center text-sm font-bold shadow-sm transition-all duration-200"
+                                         :class="{
+                                            'bg-primary border-primary text-white shadow-md -translate-y-1': {{ i }} <= (hover || rating),
+                                            'bg-white border-slate-200 text-slate-600': {{ i }} > (hover || rating)
+                                         }">
+                                        {{ i }}
+                                    </div>
+                                    
+                                </label>
+                                {% endfor %}
+                                
+                            </div>
+                            
+                            <!-- Helper: Show selected value text (Optional) -->
+                            <div class="h-4 mt-2 text-center">
+                                <span x-show="rating" x-transition class="text-xs font-bold text-primary">
+                                    Selected: <span x-text="rating"></span>
+                                </span>
+                            </div>
                         </div>
                     {% endif %}
 

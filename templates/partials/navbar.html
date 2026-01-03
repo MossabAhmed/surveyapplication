@@ -33,8 +33,9 @@
                 <button
                     type="submit"
                     form="survey-form"
-                    formaction="{% url 'PreviewSurvey' %}"
-                    formtarget="_blank"
+                    name="action"
+                    value="preview"
+                    formtarget="_self"
                     class="btn btn-ghost btn-sm text-gray-600 hover:bg-gray-100 hover:text-primary gap-2 border-1 normal-case font-normal">
                     <i class="fa-solid fa-eye"></i>
                     Preview

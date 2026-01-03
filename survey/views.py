@@ -39,14 +39,31 @@ class SurveyCreateView(CreateView):
         return context
 
     def post(self, request, *args, **kwargs):
-        data = request.POST.copy()  # make POST mutable
-
-        data = normalize_formset_indexes(data, prefix="questions")
+        self.object = None
+        data = normalize_formset_indexes(request.POST.copy(), prefix="questions")
 
         # Replace the request.POST with cleaned data
         request._post = data
 
-        return super().post(request, *args, **kwargs)
+        form = self.get_form()
+        question_formset = QuestionFormSet(data)
+
+        if form.is_valid() and question_formset.is_valid():
+            if request.POST.get('action') == 'preview':
+                request.session['survey_backup_data'] = request.POST.copy()
+
+                survey = form.save(commit=False)
+                questions = question_formset.save(commit=False)
+
+                context = {
+                    'survey': survey,
+                    'questions': questions,
+                }
+
+                return render(request, 'Survey_preview.html', context)
+            return super().post(request, *args, **kwargs)
+        else:
+            return super().form_invalid(form)
     
 
     def get(self, request, *args, **kwargs):
