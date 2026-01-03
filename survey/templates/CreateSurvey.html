@@ -35,6 +35,9 @@
                     {% if f.question_type.value == 'Matrix Question' %}
                         {% include "partials/Create_survey/Questions/Matrix_Question.html" %}
                     {% endif %}
+                    {% if f.question_type.value == 'Rating Question' %}
+                        {% include "partials/Create_survey/Questions/Rating_Question.html" %}
+                    {% endif %}
                 {% endwith %}
             {% endfor %}            
             <div id="target_question" hidden class="flex flex-col gap-3 p-4"></div>

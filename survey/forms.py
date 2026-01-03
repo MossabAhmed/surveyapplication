@@ -185,13 +185,70 @@ class MatrixQuestionForm(BaseQuestionForm):
         return cleaned_data
 
 
+class RatingQuestionForm(BaseQuestionForm):
+    polymorphic_ctype = forms.IntegerField(widget=forms.HiddenInput())
+    def __init__(self, *args, **kwargs):
+        """
+        Override __init__ to dynamically set the initial value for 'polymorphic_ctype'.
+        """
+        super().__init__(*args, **kwargs)
+        ctype = ContentType.objects.get_for_model(self._meta.model)
+        self.initial['polymorphic_ctype'] = ctype.id
+
+    class Meta(BaseQuestionForm.Meta):
+        model = models.RatingQuestion
+        fields = BaseQuestionForm.Meta.fields + ['range_min', 'range_max', 'min_label', 'max_label']
+        widgets = {
+            **BaseQuestionForm.Meta.widgets,
+            'range_min': forms.NumberInput(attrs={
+                'class': 'input input-bordered input-sm w-full bg-white text-center',
+                'min': '1', 'max': '20', 'x-model.number': 'minVal',
+                '@input': 'if(minVal > 20) minVal = 20;',
+
+                # 2. When leaving the field: If empty or negative, reset to 0
+                '@blur': 'if(minVal === "" || minVal < 0) minVal = 0;'
+            }),
+            'range_max': forms.NumberInput(attrs={
+                'class': 'input input-bordered input-sm w-full bg-white text-center',
+                'min': '2', 'max': '20', 'x-model.number': 'maxVal',
+                '@input': 'if(maxVal > 20) maxVal = 20;',
+
+                # 2. When leaving the field: If empty or negative, reset to 0
+                '@blur': 'if(maxVal === "" || maxVal < 0) maxVal = 20;'
+            }),
+            'min_label': forms.TextInput(attrs={
+                'class': 'input input-bordered input-sm w-full bg-white',
+                'placeholder': 'e.g. Poor',
+                'x-model': 'minLabel'
+            }),
+            'max_label': forms.TextInput(attrs={
+                'class': 'input input-bordered input-sm w-full bg-white',
+                'placeholder': 'e.g. Excellent',
+                'x-model': 'maxLabel'
+            }),
+        }
+
+    def clean(self):
+        cleaned_data = super().clean()
+        min_val = cleaned_data.get('range_min')
+        max_val = cleaned_data.get('range_max')
+
+        if min_val is not None and max_val is not None:
+            if min_val >= max_val:
+                self.add_error('range_max', "Max value must be greater than Min value.")
+            if (max_val - min_val) > 20: # Prevent crazy huge scales
+                self.add_error('range_max', "Scale range is too large (max 20 steps).")
+        
+        return cleaned_data
+
 QuestionFormSet = polymorphic_inlineformset_factory(
     models.Survey,  # Parent Model
     models.Question, # Base Child Model
     formset_children=(
         PolymorphicFormSetChild(models.MultiChoiceQuestion, MultiChoiceQuestionForm),
         PolymorphicFormSetChild(models.LikertQuestion, LikertQuestionForm),
-        PolymorphicFormSetChild(models.MatrixQuestion, MatrixQuestionForm)
+        PolymorphicFormSetChild(models.MatrixQuestion, MatrixQuestionForm),
+        PolymorphicFormSetChild(models.RatingQuestion, RatingQuestionForm),
     ),
     extra=0,
     can_delete=True,

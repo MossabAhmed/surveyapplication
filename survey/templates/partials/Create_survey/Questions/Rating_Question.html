@@ -1,0 +1,124 @@
+{% load static %}
+<div class="bg-white shadow-md border card border-gray-200 w-full question-card group" id="question-{{ form.position.value }}">
+    {{ form.polymorphic_ctype }}
+    {{ form.position }}
+    {{ form.question_type }}
+    
+    <div class="card-body relative p-6">
+        {% include "partials/Create_survey/Questions/question_header_card.html" %}
+        
+        <h1 class="textarea-xl font-medium text-gray-950 text-center p-1">Rating Question</h1>
+        
+        <!-- Question Label -->
+        <div class="flex justify-between items-start mb-4">
+            <div class="flex flex-row gap-2 items-center flex-grow">
+                <span class="text-lg font-semibold question-number">{{ form.position.value }}.</span>
+                {{ form.label }}
+                {{ form.label.errors }}
+            </div>
+        </div>
+
+        <!-- Settings: Helper Text -->
+        <div class="mt-2 bg-slate-50 border border-slate-200 rounded-lg p-4 mb-6">
+            <div class="flex flex-col md:flex-row gap-4 items-start">
+                <div class="w-full">
+                    <label class="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-1.5">
+                        Help text <span class="font-normal text-slate-400 normal-case">(Optional)</span>
+                    </label>
+                    <div class="w-full">
+                        {{ form.helper_text }}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Rating Configuration Section -->
+        <div x-data="{ 
+                minVal: {{ form.range_min.value|default:1 }}, 
+                maxVal: {{ form.range_max.value|default:5 }},
+                maxLabel: '{{ form.max_label.value|default:"Excellent" }}',
+                minLabel: '{{ form.min_label.value|default:"Poor" }}',
+             }" 
+             class="flex flex-col gap-4">
+
+            <!-- The Gray Container -->
+            <div class="bg-slate-50/50 rounded-xl border border-slate-200 p-4">
+                
+                <div class="flex items-center justify-between mb-3">
+                    <label class="block text-sm font-bold text-gray-700 uppercase tracking-wide">
+                        Rating Scale Setup
+                    </label>
+                </div>
+
+                <!-- Range Settings Grid -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                    
+                    <!-- Range Values -->
+                    <div class="space-y-4">
+                        <label class="block text-xs font-bold text-slate-500 uppercase tracking-wide">Range Values</label>
+                        <div class="flex items-center gap-3">
+                            <div class="w-20">
+                                {{ form.range_min }} <!-- Input for Min (e.g. 1) -->
+                            </div>
+                            <span class="text-slate-400 font-bold">to</span>
+                            <div class="w-20">
+                                {{ form.range_max }} <!-- Input for Max (e.g. 5, 10) -->
+                            </div>
+                        </div>
+                        <div class="text-xs text-red-500">
+                            {{ form.range_min.errors }}
+                            {{ form.range_max.errors }}
+                        </div>
+                    </div>
+
+                    <!-- Range Labels (Optional) -->
+                    <div class="space-y-4">
+                        <label class="block text-xs font-bold text-slate-500 uppercase tracking-wide">Labels (Optional)</label>
+                        <div class="flex flex-col gap-2">
+                            <div class="flex items-center gap-2">
+                                <span class="text-xs text-slate-400 w-8">Min:</span>
+                                {{ form.min_label }}
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <span class="text-xs text-slate-400 w-8">Max:</span>
+                                {{ form.max_label }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Visual Preview Area -->
+                <div class="border-t border-slate-200 pt-4 mt-2">
+                    <label class="block text-xs font-bold text-slate-400 uppercase tracking-wide mb-3">Preview</label>
+                    
+                    <div class="flex items-center justify-between px-2">
+                        <!-- Rating Stars / Numbers Preview -->
+                        <div class="flex gap-1 w-full justify-between items-center bg-white border border-slate-200 rounded-lg p-3">
+                            <!-- Min Label Preview -->
+                            <span class="text-xs font-medium text-slate-500" x-text="minLabel"></span>
+                            
+                            <!-- Scale Dots -->
+                            <div class="flex flex-wrap gap-1.5">
+                                <template x-for="i in (maxVal - minVal + 1)" :key="i">
+                                    <div class="w-8 h-8 rounded-full border border-primary text-primary p-1s flex items-center justify-center text-sm font-bold"
+                                         :class="{'bg-primary text-white': i > (maxVal - minVal) / 2}"
+                                         x-text="(minVal + i - 1)">
+                                    </div>
+                                </template>
+                            </div>
+
+                            <!-- Max Label Preview -->
+                            <span class="text-xs font-medium text-slate-500" x-text="maxLabel"></span>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Footer -->
+            <div class="block px-2 py-2 border-t border-gray-100 mt-2">
+                {% include "partials/Create_survey/question_footer_card.html" with is_multi=False %}
+            </div>
+        </div>
+    </div>
+</div>

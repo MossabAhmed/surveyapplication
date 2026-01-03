@@ -5,7 +5,7 @@ from django.db.models import Q, Count, Avg
 from django.db import transaction
 from django.core.paginator import Paginator
 from .models import Question as que, Survey, Response, Answer, MultiChoiceQuestion, LikertQuestion, CustomUser, Question
-from .forms import MultiChoiceQuestionForm, SurveyForm,  LikertQuestionForm,  QuestionFormSet, MatrixQuestionForm 
+from .forms import MultiChoiceQuestionForm, RatingQuestionForm, SurveyForm,  LikertQuestionForm,  QuestionFormSet, MatrixQuestionForm 
 from django.contrib.contenttypes.models import ContentType
 from django.utils import timezone
 from datetime import timedelta
@@ -131,7 +131,8 @@ class AddQuestionFormView(View):
         ModelFormMap = {
            'Multi-Choice Question': MultiChoiceQuestionForm,
             'Likert Question': LikertQuestionForm,
-            'Matrix Question': MatrixQuestionForm
+            'Matrix Question': MatrixQuestionForm,
+            'Rating Question': RatingQuestionForm,
         }
 
         print(question_type_name)

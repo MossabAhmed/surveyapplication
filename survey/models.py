@@ -137,6 +137,12 @@ class MatrixQuestion(Question):
     NAME = "Matrix Question"
 
     
+class RatingQuestion(Question):
+    range_min = models.IntegerField(default=1)
+    range_max = models.IntegerField(default=5)
+    min_label = models.CharField(max_length=50, blank=True, null=True) # e.g. "Poor"
+    max_label = models.CharField(max_length=50, blank=True, null=True) # e.g. "Excellent"
+    NAME = "Rating Question"
 
 class Response(models.Model):
     survey = models.ForeignKey(Survey, on_delete=models.CASCADE, related_name='responses')

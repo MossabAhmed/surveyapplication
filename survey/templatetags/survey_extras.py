@@ -32,3 +32,16 @@ def shuffle_if(seq, condition):
         except:
             return seq
     return seq
+
+@register.filter()
+def get_range(min_val, max_val):
+    """
+    Returns a range of numbers from min to max.
+    Usage: {% for i in 1|get_range:5 %}
+    """
+    try:
+        min_val = int(min_val)
+        max_val = int(max_val)
+        return range(min_val, max_val + 1)
+    except (ValueError, TypeError):
+        return []
