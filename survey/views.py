@@ -401,3 +401,43 @@ def CreateFile(request):
     filename = request.POST.get('filename')
     context = {'filename': filename}
     return render(request, 'partials/subFile.html',context)
+def SurveyResponsesOverviewTable(request, uuid):
+    """
+    Returns the HTML for the responses overview table (numeric values).
+    """
+    survey = get_object_or_404(Survey, uuid=uuid)
+    questions = survey.questions.all().order_by('position')
+    responses = Response.objects.filter(survey=survey).order_by('-created_at').prefetch_related('answers__question')
+    
+    # Prepare data for the table
+    table_data = []
+    for response in responses:
+        row = {'response': response, 'cells': []}
+        # Map question_id to answer object for quick lookup
+        response_answers = {a.question_id: a for a in response.answers.all()}
+        
+        for question in questions:
+            answer = response_answers.get(question.id)
+            if answer:
+                # Use the new method we added to the models
+                # Note: answer.question might be the base Question if not casted, 
+                # but since Question is PolymorphicModel, accessing it should yield the subclass
+                # However, answer.question is a ForeignKey. 
+                # To be safe, we use the 'question' object from the outer loop which we know is polymorphic 
+                # (if survey.questions.all() returns polymorphic objects)
+                
+                # survey.questions.all() returns a PolymorphicQuerySet if Question is PolymorphicModel
+                # So 'question' variable is already the subclass.
+                
+                numeric_value = question.get_numeric_answer(answer.answer_data)
+                row['cells'].append(numeric_value)
+            else:
+                row['cells'].append("-")
+        table_data.append(row)
+        
+    context = {
+        'survey': survey,
+        'questions': questions,
+        'table_data': table_data,
+    }
+    return render(request, 'partials/SurveyResponseDetail/responses_overview_table.html', context)

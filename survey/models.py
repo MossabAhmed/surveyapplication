@@ -101,6 +101,30 @@ class MultiChoiceQuestion(Question):
         
         return distribution
 
+    def get_numeric_answer(self, answer_data):
+        """Convert answer text to a single numeric value using binary representation"""
+        if not answer_data:
+            return ""
+        
+        options = self.options
+        binary_sum = 0
+        
+        # Ensure answer_data is a list for uniform processing
+        selections = answer_data if isinstance(answer_data, list) else [answer_data]
+        
+        for val in selections:
+            try:
+                # Find index of the selection (0-based)
+                idx = options.index(val)
+                # Add 2^index to the sum (1, 2, 4, 8, etc.)
+                binary_sum += (1 << idx)
+            except ValueError:
+                # Value not in options, ignore
+                pass
+                
+        return str(binary_sum)
+
+
 class LikertQuestion(Question):
     options = models.JSONField(default=list)
     scale_max = models.IntegerField(default=5)
