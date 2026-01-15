@@ -212,13 +212,11 @@ document.addEventListener("alpine:init", () => {
       }
   });
 
-  // 5. Clean URL on load if action=edit
-  // This ensures that if the user refreshes the page, it reloads without the 'edit' action,
-  // returning the form to its default (empty) state as requested.
+  // 5. If in 'edit' mode (returned from preview), mark form as dirty immediately
+  // This ensures that if the user tries to leave or refresh, they get the warning.
   const urlParams = new URLSearchParams(window.location.search);
   if (urlParams.has('action') && urlParams.get('action') === 'edit') {
-      const newUrl = window.location.pathname;
-      window.history.replaceState({}, '', newUrl);
+      formIsDirty = true;
   }
 
 });
