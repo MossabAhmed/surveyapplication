@@ -1,13 +1,14 @@
 {% extends "base.html" %}
 {% include "partials/navbar.html" %}
 {% block content %}
+<div x-data="questionManager()" 
+     @move-question="moveQuestion($event.detail.btn, $event.detail.direction)"
+     @htmx:after-swap.camel="setTimeout(() => { updateQuestionOrder() }, 10)">
+    
     {% comment %} post request in the viwe i use  "request.POST.get('question_count')" {% endcomment %}
     <form class="grid grid-cols-1 lg:grid-cols-12 gap-6 p-4 max-w-[1600px] mx-auto" method="POST" action="{% url 'CreateSurvey' %}"
           id="survey-form"
-          x-data="questionManager()"
-          @move-question="moveQuestion($event.detail.btn, $event.detail.direction)"
-          @keydown.enter.prevent
-          @htmx:after-swap.camel="setTimeout(() => { updateQuestionOrder() }, 10)"> 
+          @keydown.enter.prevent> 
         {% csrf_token %}
         {{ Question_formset.management_form }}
 
@@ -109,4 +110,5 @@
         </div>
     </form>
     {% include "partials/Create_survey/add_question_modal.html" %}
+</div>
 {% endblock content %}
