@@ -1,5 +1,6 @@
 from django import template
 import random
+from survey.models import SectionHeader
 
 
 register = template.Library()
@@ -32,6 +33,59 @@ def shuffle_if(seq, condition):
         except:
             return seq
     return seq
+
+
+@register.filter
+def group_by_sections(questions, shuffle_questions=False):
+    """Split a flat question list/queryset into sections using SectionHeader as page titles."""
+    try:
+        items = list(questions)
+    except TypeError:
+        return []
+
+    # Best-effort stable ordering
+    try:
+        items = sorted(items, key=lambda q: (q.position is None, q.position))
+    except Exception:
+        pass
+
+    sections = []
+    current_title = "Section 1"
+    current_description = ""
+    current_questions = []
+    section_index = 1
+
+    for item in items:
+        if isinstance(item, SectionHeader):
+            # Close previous section if it has any questions
+            if current_questions:
+                if shuffle_questions:
+                    random.shuffle(current_questions)
+
+                sections.append({
+                    'title': current_title,
+                    'description': current_description,
+                    'questions': current_questions,
+                })
+            section_index += 1
+            current_title = item.label or f"Section {section_index}"
+            current_description = item.helper_text
+            current_questions = []
+            continue
+
+        current_questions.append(item)
+
+    if current_questions:
+        if shuffle_questions:
+            random.shuffle(current_questions)
+
+        sections.append({
+            'title': current_title,
+            'description': current_description,
+            'questions': current_questions,
+        })
+
+    return sections
 
 @register.filter()
 def get_range(min_val, max_val):
