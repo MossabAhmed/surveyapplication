@@ -1,8 +1,8 @@
 {% load static %}
-<div class="bg-white shadow-xs card border-gray-200 w-full border-3 border-dashed"
+<div class="bg-white shadow-xs card w-full border-2 border-dashed border-gray-200 transition-colors duration-200"
      id="question_container_add"
-     :class="{ 'border-primary': isDragging }">
-     <div class="card-body p-10 flex items-center justify-center space-y-4"
+     :class="{ 'border-primary bg-gray-50': isDragging }">
+     <div class="card-body p-8 md:p-12 flex flex-col items-center justify-center space-y-4 text-center"
           @dragover.prevent
           :class="{ 'opacity-50': isDragging }"
           hx-post="{% url 'add_question' %}"
@@ -13,12 +13,23 @@
           hx-target="#target_question"
           hx-swap="beforebegin"
           hx-vals="js:{ question_type: this._questionType,  question_count_position: document.querySelector('#id_questions-TOTAL_FORMS').value }">
+          
           <img src="{% static 'radio-plus.svg' %}"
-               width="50px"
-               height="50px"
-               alt="radio icon plus" />
-          <h2 class="text-3xl">Drag Question Here To Start Building Your Survey</h2>
-          <p class="text-gray-500">Your survey questions will appear here as you add them from the library.</p>
-          <button type="button" class="btn btn-primary" onclick="add_question_modal.showModal()">Add Question</button>
+               class="w-16 h-16 opacity-60 mb-2"
+               alt="Add question icon" />
+               
+          <h2 class="text-xl md:text-2xl font-bold text-gray-800">
+            <span class="hidden lg:inline">Drag Question Here To Start</span>
+            <span class="lg:hidden">Add New Question</span>
+          </h2>
+          
+          <p class="text-gray-500 max-w-prose">
+            <span class="hidden lg:inline">Drag a question type from the library or click below to add one manually.</span>
+            <span class="lg:hidden">Tap the button below to select a question type.</span>
+          </p>
+          
+          <button type="button" class="btn btn-primary btn-wide" onclick="add_question_modal.showModal()">
+            <i class="fa-solid fa-plus"></i> Add Question
+          </button>
      </div>
 </div>

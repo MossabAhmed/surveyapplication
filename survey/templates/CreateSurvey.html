@@ -2,7 +2,7 @@
 {% include "partials/navbar.html" %}
 {% block content %}
     {% comment %} post request in the viwe i use  "request.POST.get('question_count')" {% endcomment %}
-    <form class="flex flex-row gap-4" method="POST" action="{% url 'CreateSurvey' %}"
+    <form class="grid grid-cols-1 lg:grid-cols-12 gap-6 p-4 max-w-[1600px] mx-auto" method="POST" action="{% url 'CreateSurvey' %}"
           id="survey-form"
           x-data="questionManager()"
           @move-question="moveQuestion($event.detail.btn, $event.detail.direction)"
@@ -10,20 +10,59 @@
           @htmx:after-swap.camel="setTimeout(() => { updateQuestionOrder() }, 10)"> 
         {% csrf_token %}
         {{ Question_formset.management_form }}
-        <div class="sticky top-6 self-start flex flex-col gap-4 m-4 rounded-b-lg  w-[20%]">
-            <div class="bg-white shadow-md border card border-gray-200 w-full ">
-                <div class="card-body">
-                    <h2 class="text-2xl"> Create new survey</h2>
-                    <label for="{{ form.title.id_for_label }}" class="text-gray-500">survey name</label>
-                    {{ form.title }}
-                    <label for="{{ form.description.id_for_label }}" class="text-gray-500 mt-2.5 ">Description</label>
-                    {{ form.description }}
+
+        <!-- Left Sidebar: Survey Info & Library -->
+        <div class="lg:col-span-3 space-y-6 lg:sticky lg:top-4 h-fit">
+                        <div class="bg-white shadow-md border card border-gray-200">
+                <div class="card-body p-6">
+                    <h2 class="text-2xl">Create New Survey</h2>
+
+                    <div class="flex flex-col gap-4">
+                        <div class="form-control w-full">
+                            <label for="{{ form.title.id_for_label }}" class="label">
+                                <span class="text-gray-500">Survey Name</span>
+                            </label>
+                            {{ form.title }}
+                        </div>
+                        
+                        <div class="form-control w-full">
+                            <label for="{{ form.description.id_for_label }}" class="label">
+                                <span class="text-gray-500 text-base">Description</span>
+                            </label>
+                            {{ form.description }}
+                        </div>
+
+                        <div class="divider my-0"></div>
+
+                        <div class="flex flex-col">
+                            <p class="font-medium text-base mb-2 text-gray-500">Settings</p>
+                            
+                            <div class="form-control my-1">
+                                <label class="label cursor-pointer justify-start gap-3">
+                                    {{ form.shuffle_questions }}
+                                    <span class="label-text">Shuffle Questions</span>
+                                </label>
+                            </div>
+
+                            <div class="form-control my-1">
+                                <label class="label cursor-pointer justify-start gap-3">
+                                    {{ form.anonymous_responses }}
+                                    <span class="label-text">Anonymous Responses</span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
-            <div>{% include "partials/Create_survey/question_Library_card.html" %}</div>
+            
+            <!-- Draggable Library (Hidden on Mobile) -->
+            <div class="hidden lg:block">
+                {% include "partials/Create_survey/question_Library_card.html" %}
+            </div>
         </div>
-        {% comment %} middle Survey questions th adrag and drop machnism {% endcomment %}
-        <div class="flex flex-col gap-4 m-4 mx-0 md:w-[60%] lg:w-[75%]" id="question_container" x-auto-animate>
+
+        <!-- Middle Column: Questions List -->
+        <div class="lg:col-span-9 space-y-6" id="question_container" x-auto-animate>
             {% for f in Question_formset.forms %}
                 {% if f.DELETE.value %}
                     <div style="display: none;">
@@ -60,26 +99,14 @@
                 {% endwith %}
                 {% endif %}
             {% endfor %}            
-            <div id="target_question" hidden class="flex flex-col gap-3 p-4"></div>
+            <div id="target_question" hidden class="flex flex-col gap-3"></div>
             {% include "partials/Create_survey/question_container_card.html" %}
         </div>
-        {% comment %} right side  settings {% endcomment %}
-        <div class="sticky top-6 self-start flex flex-col gap-4 m-4 rounded-b-lg  w-[20%] h-fit">
-            <div class="bg-white shadow-md border card border-gray-200">
-                <div class="card-body">
-                    <p class="font-medium text-base">Settings</p>
-                    <div class="flex flex-row gap-2 ml-1.5">
-                        <p>Shuffle questions</p>
-                        {{ form.shuffle_questions }}
-                    </div>
-                    <div class="flex flex-row gap-2 ml-1.5">
-                        <p>anonymous responses</p>
-                        {{ form.anonymous_responses }}
-                    </div>
-                </div>
-            </div>
+
+        <!-- Floating Save Button -->
+        <div class="fixed bottom-6 right-6 z-50">
+            <input type="submit" id="save-survey" class="btn btn-primary shadow-xl rounded-full px-8 gap-2 font-bold uppercase tracking-wide" value="Save Survey">
         </div>
-        <input type="submit" id="save-survey" class="right-4 bottom-4 btn btn-primary fixed" value="Save Survey">
     </form>
     {% include "partials/Create_survey/add_question_modal.html" %}
 {% endblock content %}

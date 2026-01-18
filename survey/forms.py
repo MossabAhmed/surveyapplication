@@ -9,8 +9,8 @@ class SurveyForm(forms.ModelForm):
         model = models.Survey
         fields = ['title', 'description', 'shuffle_questions', 'anonymous_responses']
         widgets = {
-            'title': forms.TextInput(attrs={'class': 'input input-primary ', 'placeholder': 'e.g. Customer Satisfaction'}),
-            'description': forms.Textarea(attrs={'class': 'textarea textarea-primary w-full h-32', 'placeholder': 'e.g. This survey is about customer satisfaction.'}),
+            'title': forms.TextInput(attrs={'class': 'input input-primary block', 'placeholder': 'e.g. Customer Satisfaction'}),
+            'description': forms.Textarea(attrs={'class': 'textarea textarea-primary w-full h-16', 'placeholder': 'e.g. This survey is about customer satisfaction.'}),
             'shuffle_questions': forms.CheckboxInput(attrs={'class': 'toggle toggle-primary'}),
             'anonymous_responses': forms.CheckboxInput(attrs={'class': 'toggle toggle-primary'}),
         }

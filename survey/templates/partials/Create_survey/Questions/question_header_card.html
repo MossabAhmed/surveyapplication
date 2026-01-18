@@ -23,7 +23,7 @@
             title="Add Similar Question Below"
             @click="incrementTotalForms()"
             hx-post="{% url 'add_question' %}"
-            hx-target="closest .question-card"
+            hx-target="closest .question-card, .section-header"
             hx-swap="afterend"
             hx-vals='js:{ question_type: "{{ form.question_type.value }}", question_count_position: document.querySelector("#id_questions-TOTAL_FORMS").value }'>
         <i class="fa-solid fa-plus"></i> 
