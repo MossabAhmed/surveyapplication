@@ -36,17 +36,16 @@
                     name="action"
                     value="preview"
                     formtarget="_self"
-                    class="btn btn-ghost btn-sm text-gray-600 hover:bg-gray-100 hover:text-primary gap-2 border-1 normal-case font-normal">
+                    class="btn btn-ghost bg-white/80 backdrop-blur shadow-lg rounded-full px-6 gap-2 font-bold uppercase tracking-wide border border-gray-200 text-gray-600 hover:bg-white hover:text-primary">
                     <i class="fa-solid fa-eye"></i>
                     Preview
                 </button>
 
                 <!-- Publish Button (Purplish) -->
-                <button type="submit" 
-                        form="survey-form" 
-                        class="btn btn-sm btn-primary bg-primary  border-none gap-2 px-6 rounded-full shadow-sm hover:shadow-md transition-all">
-                    Publish
+                <button type="submit" form="survey-form" name="action" value="publish" class="btn btn-primary shadow-xl rounded-full px-6 gap-2 font-bold uppercase tracking-wide">
+                    <i class="fa-solid fa-rocket"></i> Publish
                 </button>
+
             </div>
         {% else %}
             <!-- Show this button on all other pages (Dashboard, etc) -->

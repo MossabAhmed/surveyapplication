@@ -115,6 +115,14 @@ class SurveyCreateView(CreateView):
             with transaction.atomic():
                 # 1. Save the Survey (Parent)
                 self.object = form.save(commit=False)
+                
+                # Determine state based on user action
+                action = self.request.POST.get('action')
+                if action == 'publish':
+                    self.object.state = 'published'
+                else:
+                    self.object.state = 'draft'
+
                 self.object.created_by = CustomUser.objects.first()
                 self.object.question_count = formset.total_form_count()
                 self.object.save()

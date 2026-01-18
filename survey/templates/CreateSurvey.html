@@ -106,8 +106,11 @@
 
         <!-- Floating Save Button -->
         <div class="fixed bottom-6 right-6 z-50">
-            <input type="submit" id="save-survey" class="btn btn-primary shadow-xl rounded-full px-8 gap-2 font-bold uppercase tracking-wide" value="Save Survey">
+            <button type="submit" name="action" value="draft" class="btn btn-neutral shadow-xl rounded-full px-6 gap-2 font-bold uppercase tracking-wide">
+                <i class="fa-solid fa-floppy-disk"></i> Save Draft
+            </button>
         </div>
+        
     </form>
     {% include "partials/Create_survey/add_question_modal.html" %}
 </div>
