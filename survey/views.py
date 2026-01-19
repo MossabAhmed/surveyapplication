@@ -198,7 +198,7 @@ def Index(request, page_number=1):
     from urllib.parse import urlencode
 
     # --- Session Persistence Logic ---
-    FILTER_KEYS = ['search']
+    FILTER_KEYS = ['search', 'state_filter', 'responses_filter', 'start_date', 'end_date']
     
     # Check if request has any filter parameters (including page via URL path)
     has_filters = any(request.GET.get(key) for key in FILTER_KEYS) or page_number > 1
@@ -240,21 +240,62 @@ def Index(request, page_number=1):
     # --- End Session Persistence Logic ---
 
     query = request.GET.get('search', '').strip()
+    state_filter = request.GET.get('state_filter', '').strip()
+    responses_filter = request.GET.get('responses_filter', '').strip()
+    start_date = request.GET.get('start_date', '').strip()
+    end_date = request.GET.get('end_date', '').strip()
 
+    # Base queryset with response counts
+    # We need annotate to filter by responses count
+    surveys = Survey.objects.annotate(
+        responses_count=Count('responses')
+    )
+
+    # 1. Apply Date Filter (based on last_updated)
+    if start_date:
+        try:
+            start_date_obj = datetime.strptime(start_date, '%Y-%m-%d').date()
+            surveys = surveys.filter(last_updated__date__gte=start_date_obj)
+        except ValueError:
+            pass # Ignore invalid date format
+            
+    if end_date:
+        try:
+            end_date_obj = datetime.strptime(end_date, '%Y-%m-%d').date()
+            # Add one day to include the end date itself
+            surveys = surveys.filter(last_updated__date__lte=end_date_obj)
+        except ValueError:
+            pass # Ignore invalid date format
+
+    # 2. Apply State Filter
+    if state_filter and state_filter.lower() in ['draft', 'published', 'archived', 'closed']:
+         surveys = surveys.filter(state=state_filter.lower())
+    
+    # 3. Apply Responses Count Filter
+    if responses_filter == 'has_responses':
+        surveys = surveys.filter(responses_count__gt=0)
+    elif responses_filter == 'no_responses':
+        surveys = surveys.filter(responses_count=0)
+
+    # 4. Apply Search Query
     if query:
-        survey_list = Survey.objects.filter(
+        surveys = surveys.filter(
             Q(title__icontains=query) |
             Q(description__icontains=query)
-        ).order_by('-last_updated')
-    else:
-        survey_list = Survey.objects.order_by('-last_updated')
+        )
+    
+    surveys = surveys.order_by('-last_updated')
 
-    paginator = Paginator(survey_list, 5)
+    paginator = Paginator(surveys, 5)
     page = paginator.get_page(page_number)
 
     context = {
         'page': page,
-        'query': query, # Add this
+        'query': query,
+        'state_filter': state_filter,
+        'responses_filter': responses_filter,
+        'start_date': start_date,
+        'end_date': end_date,
     }
 
     is_htmx = request.headers.get('HX-Request') == 'true'
