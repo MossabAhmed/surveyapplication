@@ -4,14 +4,14 @@
 <tr class="border-b">
     <th scope="row" class="px-4 py-3 font-medium text-gray-600">{{ survey.title }}</th>
     <td class="mx-4 my-3 line-clamp-3">{{ survey.description }}</td>
-    <td class="px-2 py-3 rounded-full">
-        <span class="rounded-full px-4 py-2 {{ survey.status_badge_class }}">{{ survey.state }}</span>
+    <td class="px-2 py-3 rounded-full text-center">
+        <span class="rounded-full px-4 py-2 {{ survey.status_badge_class }} ">{{ survey.state }}</span>
     </td>
     <!-- TODO -->
-    <td class="px-4 py-3">Responses</td>
-    <td class="px-4 py-3">{{ survey.last_updated|date:"SHORT_DATETIME_FORMAT" }}</td>
+    <td class="px-4 py-3 text-center">{{ survey.response_count }}</td>
+    <td class="px-4 py-3 text-center">{{ survey.last_updated|date:"SHORT_DATETIME_FORMAT" }}</td>
     <!-- Dropdown menu -->
-    <td class="px-4 py-3" x-data="{ open: false }">
+    <td class="px-4 py-3 tex" x-data="{ open: false }">
         <div class="dropdown dropdown-left dropdown-center">
             <!-- 2. The trigger button needs a tabindex -->
             <div tabindex="0"

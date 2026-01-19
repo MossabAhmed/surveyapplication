@@ -1,34 +1,47 @@
 {% extends "base.html" %} {% block content %}
-<div class="container mx-auto p-6">
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
   <!-- Header -->
-  <div class="mb-8">
-    <h1 class="text-3xl font-bold text-gray-800">Survey Responses</h1>
+  <div class="mb-10">
+    <h1 class="text-3xl font-extrabold text-gray-900 tracking-tight">Survey Responses</h1>
+    <p class="mt-2 text-sm text-gray-500">
+      Overview of recent activity and all collected responses across your surveys.
+    </p>
   </div>
 
   <!-- Recent Surveys with Responses -->
-  <div class="mb-6">
-    <h2 class="text-xl font-semibold mb-4">Recent Surveys with Responses</h2>
-    <div
-      class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4"
-    >
+  <section class="mb-12">
+    <div class="flex items-center justify-between mb-6">
+      <h2 class="text-xl font-bold text-gray-900">Recent Activity</h2>
+    </div>
+    
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
       {% for survey in recent_surveys %} 
         {% include "partials/Responses/survey_response_card.html" with survey=survey %} 
-        {% empty %}
-      <div class="col-span-full text-center py-8 text-gray-500">
-        No surveys with responses yet
-      </div>
+      {% empty %}
+        <div class="col-span-full flex flex-col items-center justify-center p-12 bg-gray-50 rounded-xl border-2 border-dashed border-gray-200 text-center">
+            <svg class="h-10 w-10 text-gray-400 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            <h3 class="text-sm font-medium text-gray-900">No responses yet</h3>
+            <p class="mt-1 text-sm text-gray-500">Surveys with new responses will appear here.</p>
+        </div>
       {% endfor %}
     </div>
-  </div>
+  </section>
 
   <!-- All Surveys Table -->
-  <div
-    class="bg-white shadow-lg border border-gray-200 rounded-lg overflow-hidden mt-4"
-  >
-    {% include "partials/table_filters.html" %}
-    <div id="responses-table-and-pagination-container">
-      {% include "partials/Responses/responses_table_body.html" %}
+  <section>
+    <div class="flex items-center justify-between mb-4">
+      <h2 class="text-xl font-bold text-gray-900">All Surveys</h2>
     </div>
-  </div>
+
+    <div class="bg-white shadow-sm ring-1 ring-gray-900/5 sm:rounded-xl overflow-hidden">
+      {% include "partials/table_filters.html" %}
+      
+      <div id="responses-table-and-pagination-container" class="border-t border-gray-100">
+        {% include "partials/Responses/responses_table_body.html" %}
+      </div>
+    </div>
+  </section>
 </div>
 {% endblock content %}
