@@ -9,6 +9,7 @@ urlpatterns = [
     path('Dashboard/<int:page_number>', views.Index, name='Dashboard_Page'),
     path('CreateSurvey', views.SurveyCreateView.as_view(), name='CreateSurvey'),
     path('create-survey/add-question/', views.AddQuestionFormView.as_view(), name='add_question'),
+    path('survey/<uuid:uuid>', views.survey_Start_View, name='survey_start'),
 
     # the views need to be Change
     path('responses', views.Responses, name='Responses'),

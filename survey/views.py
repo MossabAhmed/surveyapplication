@@ -602,3 +602,15 @@ def ToggleSurveyStatus(request, uuid):
     # Here we return the button and using OOB swap, we can update the status badge as well.
     
     return render(request, 'partials/Dashboard/survey_toggle_button.html', {'survey': survey})
+
+def survey_Start_View(request, uuid):
+    """View to start taking the survey."""
+    survey = get_object_or_404(Survey, uuid=uuid, state='published')
+    questions = survey.questions.all().order_by('position')
+    
+    context = {
+        'survey': survey,
+        'questions': questions,
+    }
+
+    return render(request, 'Survey_Start.html', context)
