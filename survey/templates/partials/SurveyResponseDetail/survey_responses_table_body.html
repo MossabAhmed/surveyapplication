@@ -102,7 +102,9 @@
           {% for answer in response.answers.all %}
           <div class="bg-gray-50 p-4 rounded-lg border border-gray-100">
             <p class="font-semibold text-gray-800 mb-2 text-sm">
-              <span class="text-primary mr-2">Q{{ forloop.counter }}.</span>{{ answer.question.label }}
+              <span class="text-primary mr-2"
+                >Q{{ answer.question.position }}.</span
+              >{{ answer.question.label }}
             </p>
             <div class="text-gray-600 pl-6 border-l-2 border-primary/20">
               {% if answer.answer_data is not None %} {{ answer.answer_data }}

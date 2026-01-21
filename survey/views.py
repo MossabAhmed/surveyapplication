@@ -6,7 +6,7 @@ from django.views.decorators.http import require_POST
 from django.db.models import Q, Count, Avg, Max, Prefetch
 from django.db import transaction
 from django.core.paginator import Paginator
-from .models import Question as que, Survey, Response, Answer, MultiChoiceQuestion, LikertQuestion, CustomUser, Question
+from .models import Question as que, Survey, Response, Answer, MultiChoiceQuestion, LikertQuestion, CustomUser, Question, SectionHeader, RatingQuestion, RankQuestion, MatrixQuestion, TextQuestion
 from .forms import MultiChoiceQuestionForm, RatingQuestionForm, SurveyForm,  LikertQuestionForm,  QuestionFormSet, MatrixQuestionForm, RankQuestionForm, TextQuestionForm, SectionHeaderForm
 from django.contrib.contenttypes.models import ContentType
 from django.utils import timezone
@@ -124,7 +124,19 @@ class SurveyCreateView(CreateView):
                     self.object.state = 'draft'
 
                 self.object.created_by = CustomUser.objects.first()
-                self.object.question_count = formset.total_form_count()
+                
+                # Calculate valid questions count (excluding SectionHeader)
+                valid_questions = 0
+                for f in formset:
+                    # check if the form is marked for deletion
+                    if f.cleaned_data.get('DELETE'):
+                         continue
+                    # Check question type if available in cleaned_data
+                    q_type = f.cleaned_data.get('question_type')
+                    if q_type != 'Section Header':
+                        valid_questions += 1
+                        
+                self.object.question_count = valid_questions
                 self.object.save()
                 
                 # 2. Link the FormSet to the newly created Survey
@@ -494,6 +506,27 @@ def SurveyAnalytics(request, uuid):
             question_data['distribution'] = distribution
             question_data['average'] = average
             question_data['chart_type'] = 'bar'
+            
+        elif isinstance(question, RatingQuestion):
+            rating_question = RatingQuestion.objects.get(pk=question.pk)
+            distribution = rating_question.get_rating_distribution()
+            average = rating_question.get_average_rating()
+            question_data['distribution'] = distribution
+            question_data['average'] = average
+            question_data['chart_type'] = 'bar'
+            
+        elif isinstance(question, RankQuestion):
+            rank_question = RankQuestion.objects.get(pk=question.pk)
+            distribution = rank_question.get_average_ranks()
+            question_data['distribution'] = distribution
+            question_data['chart_type'] = 'bar'
+
+        elif isinstance(question, MatrixQuestion):
+            mx_question = MatrixQuestion.objects.get(pk=question.pk)
+            distribution = mx_question.get_matrix_distribution()
+            question_data['distribution'] = distribution
+            # Matrix is special; chart.js needs stacked bar
+            question_data['chart_type'] = 'stacked-bar'
         
         analytics_data.append(question_data)
     
@@ -528,6 +561,45 @@ def GetChartData(request, uuid, question_id):
         data['labels'] = [str(k) for k in distribution.keys()]
         data['values'] = list(distribution.values())
         data['average'] = likert_question.get_average_rating()
+        
+    elif isinstance(question, RatingQuestion):
+        rating_question = RatingQuestion.objects.get(pk=question.pk)
+        distribution = rating_question.get_rating_distribution()
+        data['labels'] = [str(k) for k in distribution.keys()]
+        data['values'] = list(distribution.values())
+        data['average'] = rating_question.get_average_rating()
+        
+    elif isinstance(question, RankQuestion):
+        rank_question = RankQuestion.objects.get(pk=question.pk)
+        distribution = rank_question.get_average_ranks()
+        # distribution is {option: avg_rank}
+        # We might want to sort by rank (which is already sorted in the method)
+        data['labels'] = list(distribution.keys())
+        data['values'] = list(distribution.values())
+        data['y_label'] = 'Average Rank Position (Lower is Better)'
+
+    elif isinstance(question, MatrixQuestion):
+        mx_question = MatrixQuestion.objects.get(pk=question.pk)
+        distribution = mx_question.get_matrix_distribution()
+        # Complex struct for stacked bar:
+        # labels = Rows
+        # datasets = Columns (each col is a stack)
+        data['labels'] = mx_question.rows
+        data['datasets'] = []
+        
+        # We need a list of values for each column across all rows
+        for col in mx_question.columns:
+            col_values = []
+            for row in mx_question.rows:
+                 # get count for this cell (row, col)
+                 count = distribution.get(row, {}).get(col, 0)
+                 col_values.append(count)
+            
+            data['datasets'].append({
+                'label': col,
+                'data': col_values
+            })
+        data['is_stacked'] = True
     
     return JsonResponse(data)
 
@@ -543,7 +615,9 @@ def SurveyResponsesOverviewTable(request, uuid):
     Returns the HTML for the responses overview table (numeric values).
     """
     survey = get_object_or_404(Survey, uuid=uuid)
-    questions = survey.questions.all().order_by('position')
+    # Exclude SectionHeader from the questions list
+    questions = survey.questions.instance_of(Question).not_instance_of(SectionHeader).order_by('position')
+    
     responses = Response.objects.filter(survey=survey).order_by('-created_at').prefetch_related('answers__question')
     
     # Prepare data for the table
@@ -557,15 +631,6 @@ def SurveyResponsesOverviewTable(request, uuid):
             answer = response_answers.get(question.id)
             if answer:
                 # Use the new method we added to the models
-                # Note: answer.question might be the base Question if not casted, 
-                # but since Question is PolymorphicModel, accessing it should yield the subclass
-                # However, answer.question is a ForeignKey. 
-                # To be safe, we use the 'question' object from the outer loop which we know is polymorphic 
-                # (if survey.questions.all() returns polymorphic objects)
-                
-                # survey.questions.all() returns a PolymorphicQuerySet if Question is PolymorphicModel
-                # So 'question' variable is already the subclass.
-                
                 numeric_value = question.get_numeric_answer(answer.answer_data)
                 row['cells'].append(numeric_value)
             else:
