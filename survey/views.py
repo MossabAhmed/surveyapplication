@@ -14,131 +14,118 @@ from datetime import timedelta, datetime
 from django.views import View
 from django.views.generic import CreateView, UpdateView, DeleteView, DetailView
 from django.shortcuts import redirect
+from django.urls import reverse
 from .utility import normalize_formset_indexes
 
-
-# Create your views here.
-class SurveyCreateView(CreateView):
-    model = Survey
-    form_class = SurveyForm
+def create_survey(request):
     template_name = 'CreateSurvey.html'
-    success_url = '/Dashboard'  
 
-    def get_context_data(self, **kwargs):
-        """
-        Adds the formset to the template context.
-        """
-        context = super().get_context_data(**kwargs)
-        context['question_type_list'] = que.get_available_type_names()
+    if request.method == 'GET':
+        form = SurveyForm()
+        question_formset = QuestionFormSet(queryset=que.objects.none())
 
-        if self.request.POST:
-            # If submitting, bind Context to the formset
-            context['Question_formset'] = QuestionFormSet(self.request.POST)
-        else:
-            # If GET, create an empty formset
-            context['Question_formset'] = QuestionFormSet()
+        context = {
+            'form': form,
+            'Question_formset': question_formset,
+            'question_type_list': que.get_available_type_names(),
+        }
+        return render(request, template_name, context)
 
-        return context
+    form = SurveyForm(request.POST)
+    question_formset = QuestionFormSet(request.POST, instance=form.instance, queryset=que.objects.none())
 
-    def post(self, request, *args, **kwargs):
-        self.object = None
-        # data = normalize_formset_indexes(request.POST.copy(), prefix="questions")
-
-        # # Replace the request.POST with cleaned data
-        # request._post = data
-
-        form = self.get_form()
-        question_formset = QuestionFormSet(request.POST, instance=self.object)
-
-        if form.is_valid() and question_formset.is_valid():
-            if request.POST.get('action') == 'preview':
-                request.session['survey_backup_data'] = request.POST.copy()
-
-                survey = form.save(commit=False)
-                questions = question_formset.save(commit=False)
-                
-                # Sort questions by position to ensure correct order in preview
-                questions.sort(key=lambda x: x.position)
-
-                context = {
-                    'survey': survey,
-                    'questions': questions,
-                }
-
-                return render(request, 'Survey_preview.html', context)
-            return super().post(request, *args, **kwargs)
-        else:
-            return super().form_invalid(form)
-    
-
-    def get(self, request, *args, **kwargs):
-        # Check for backup data in session
-        backup_data = request.session.get('survey_backup_data')
-        if request.GET.get('action') == 'edit' and  backup_data:
-            # If backup data exists, use it to pre-fill the form and formset
-            form = SurveyForm(backup_data)
-            question_formset = QuestionFormSet(backup_data)
-
-            # Manually sort the forms in the formset by their 'position' field value
-            # This ensures that when the user returns to edit, the questions are in the correct order
-            # even if they were added out of sequence (e.g. inserted in the middle).
-            def get_pos(f):
-                try:
-                    val = f['position'].value()
-                    return int(val) if val is not None else 9999
-                except (ValueError, TypeError):
-                    return 9999
-            
-            # Sort the internal list of forms
-            question_formset.forms.sort(key=get_pos)
-
-            context ={
-                'form': form,
-                'Question_formset': question_formset,
-                'question_type_list': que.get_available_type_names(),
-            }
-            return render(request, self.template_name, context)
-        else:
-            return super().get(request, *args, **kwargs)
-
-    def form_valid(self, form):
-        """
-            Called if the SurveyForm is valid. 
-            We must also validate and save the FormSet here.
-        """
-        context = self.get_context_data()
-        formset = context['Question_formset']
-
-        if formset.is_valid():
-            # Use a transaction to ensure Survey and Questions are saved together
-            # or rolled back if something fails.
+    if form.is_valid() and question_formset.is_valid():
+        if request.POST.get('action') == 'preview':
             with transaction.atomic():
-                # 1. Save the Survey (Parent)
-                self.object = form.save(commit=False)
+                survey = form.save(commit=False)
+                survey.state = 'draft' # Previewing now saves as draft
+                survey.created_by = CustomUser.objects.first()
+                survey.question_count = question_formset.total_form_count()
+                survey.save()
                 
-                # Determine state based on user action
-                action = self.request.POST.get('action')
-                if action == 'publish':
-                    self.object.state = 'published'
-                else:
-                    self.object.state = 'draft'
+                question_formset.instance = survey
+                question_formset.save()
 
-                self.object.created_by = CustomUser.objects.first()
-                self.object.question_count = formset.total_form_count()
-                self.object.save()
-                
-                # 2. Link the FormSet to the newly created Survey
-                formset.instance = self.object
-                
-                formset.save()
-                
-            if 'survey_backup_data' in self.request.session:
-                 del self.request.session['survey_backup_data']
-            return  redirect(self.get_success_url()) # Redirects to success_url
-        else:
-            return self.form_invalid(form)  
-        
+            return render(request, 'Survey_preview.html', {
+                'survey': survey,
+                'questions': survey.questions.all().order_by('position'),
+                'back_url': reverse('EditSurvey', args=[survey.uuid]),
+            })
 
+        with transaction.atomic():
+            survey = form.save(commit=False)
+            action = request.POST.get('action')
+            survey.state = 'published' if action == 'publish' else 'draft'
+            survey.created_by = CustomUser.objects.first()
+            survey.question_count = question_formset.total_form_count()
+            survey.save()
+
+            question_formset.instance = survey
+            question_formset.save()
+
+        return redirect('/Dashboard')
+
+    return render(request, template_name, {
+        'form': form,
+        'Question_formset': question_formset,
+        'question_type_list': que.get_available_type_names(),
+    })
+
+
+def edit_survey(request, uuid):
+    template_name = 'CreateSurvey.html'
+    survey = get_object_or_404(Survey, uuid=uuid)
+
+    if request.method == 'GET':
+        form = SurveyForm(instance=survey)
+        question_formset = QuestionFormSet(instance=survey, queryset=survey.questions.all())
+
+        return render(request, template_name, {
+            'form': form,
+            'Question_formset': question_formset,
+            'question_type_list': que.get_available_type_names(),
+        })
+
+    form = SurveyForm(request.POST, instance=survey)
+    question_formset = QuestionFormSet(request.POST, instance=survey, queryset=survey.questions.all())
+
+    if form.is_valid() and question_formset.is_valid():
+        if request.POST.get('action') == 'preview':
+            with transaction.atomic():
+                updated_survey = form.save(commit=False)
+                # Ensure we keep track this is a preview, status might remain what it was or 'draft'
+                # If editing, we keep the current state unless saving? 
+                # Be safe: don't change state on preview, just save content.
+                updated_survey.question_count = question_formset.total_form_count()
+                updated_survey.save()
+
+                question_formset.instance = updated_survey
+                question_formset.save()
+
+            return render(request, 'Survey_preview.html', {
+                'survey': updated_survey,
+                'questions': updated_survey.questions.all().order_by('position'),
+                'back_url': reverse('EditSurvey', args=[updated_survey.uuid]),
+            })
+
+        with transaction.atomic():
+            updated_survey = form.save(commit=False)
+            action = request.POST.get('action')
+            updated_survey.state = 'published' if action == 'publish' else 'draft'
+            updated_survey.question_count = question_formset.total_form_count()
+            updated_survey.save()
+
+            question_formset.instance = updated_survey
+            question_formset.save()
+
+        return redirect('/Dashboard')
+
+    return render(request, template_name, {
+        'form': form,
+        'Question_formset': question_formset,
+        'question_type_list': que.get_available_type_names(),
+    })
+    
 class AddQuestionFormView(View):
     def post(self, request, *args, **kwargs):
         # Get the question index (count) from the POST data.
