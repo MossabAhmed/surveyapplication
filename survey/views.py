@@ -23,6 +23,7 @@ from django.contrib.auth import login
 from django.contrib.auth.mixins import LoginRequiredMixin
 
 
+
 # Create your views here.
 class SignUpView(CreateView):
     form_class = CustomUserCreationForm
@@ -199,7 +200,6 @@ class AddQuestionFormView(LoginRequiredMixin, View):
             )
 
         return render(request, f'partials/Create_survey/Questions/{template_name}.html', context)
-
 @login_required
 def delete_survey_confirm(request, uuid):
     """
