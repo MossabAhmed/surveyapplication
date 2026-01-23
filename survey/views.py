@@ -1,5 +1,6 @@
 from django import forms
 from django.forms import BooleanField, HiddenInput
+import json
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, render
 from django.views.decorators.http import require_POST
@@ -69,7 +70,7 @@ def create_survey(request):
         'form': form,
         'Question_formset': question_formset,
         'question_type_list': que.get_available_type_names(),
-        'form_action_url': reverse('EditSurvey', kwargs={'uuid': survey.uuid}),
+        'form_action_url': reverse('CreateSurvey'),
 
     })
 
@@ -657,3 +658,61 @@ def CopySurveyView(request, uuid):
     }
 
     return render(request, 'CreateSurvey.html', context)
+
+def survey_submit(request, uuid):
+    """Submit the survey responses."""
+    survey = get_object_or_404(Survey, uuid=uuid)
+    if request.method == 'POST':
+        try:
+            with transaction.atomic():
+                response = Response.objects.create(survey=survey)
+                
+                for question in survey.questions.all():
+                    base_key = f'question_{question.position}'
+                    values = request.POST.getlist(base_key)
+                    
+                    if question.NAME == 'Matrix Question':
+                        answer_data = {}
+                        for i, row_label in enumerate(question.rows, start=1):
+                            row_key = f'{row_label}_row{i}' # e.g., row-label_1_row1
+                            val = request.POST.get(row_key)
+                            if val:
+                                answer_data[row_key] = val # Store { "Row Label": "Value" }
+                        # If empty dict, set to None so validation catches it
+                        if not answer_data: 
+                            answer_data = None
+
+                    elif question.NAME == 'Ranking Question':
+                        if values:
+                            # Save as dict where key is the rank (1-based)
+                            answer_data = {str(i): val for i, val in enumerate(values, start=1)}
+                        else:
+                            answer_data = None
+
+                    else:
+                        if len(values) > 1:
+                            answer_data = values 
+                        elif len(values) == 1:
+                            answer_data = values[0] # Single string handling
+                        else:
+                            answer_data = None
+                    
+                    # 2. Server-side Validation
+                    if question.required and not answer_data:
+                        redirect_url = reverse('Survey_Start', args=[survey.uuid])
+                        return redirect(redirect_url)
+
+                    if answer_data is not None:
+                        Answer.objects.create(
+                            response=response,
+                            question=question,
+                            answer_data=answer_data
+                        )
+        
+        except Exception as e:
+            # Handle exceptions, possibly logging or user feedback
+            return HttpResponse("An error occurred while submitting the survey.", status=500)
+            
+        return redirect('SurveyResponseDetail', uuid=survey.uuid)
+        # redirect to thanks page
+        # return render(request, 'thanks.html')

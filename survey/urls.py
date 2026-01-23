@@ -15,6 +15,7 @@ urlpatterns = [
     path("survey/<uuid:uuid>/copy", views.CopySurveyView, name="Copy"),
     path('surveys/<uuid:uuid>/delete-confirm', views.delete_survey_confirm, name='DeleteSurveyConfirmModal'),
     path("surveys/<uuid:uuid>/delete", views.DeleteSurvey, name="DeleteSurvey"),
+    path('survey/<uuid:uuid>/submit', views.survey_submit, name='survey_submit'),
     
     # the views need to be Change
     path('responses', views.Responses, name='Responses'),
