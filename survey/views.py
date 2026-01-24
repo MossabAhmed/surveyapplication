@@ -755,6 +755,4 @@ def survey_submit(request, uuid):
             # Handle exceptions, possibly logging or user feedback
             return HttpResponse("An error occurred while submitting the survey.", status=500)
             
-        return redirect('SurveyResponseDetail', uuid=survey.uuid)
-        # redirect to thanks page
-        # return render(request, 'thanks.html')
+        return render(request, 'Thanks.html', {'survey': survey})
