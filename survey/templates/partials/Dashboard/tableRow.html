@@ -42,8 +42,9 @@
                 </li>
                 <div class="divider my-0"></div>
                 <li >
-                    <button hx-post="{% url 'ToggleSurveyStatus' survey.uuid %}" hx-swap="outerHTML" >
-                        {% if survey.state == 'published' %}End Survey{% else %}Begin Survey{% endif %}
+                    <button hx-post="{% url 'ToggleSurveyStatusConfirm' survey.uuid %}" hx-target="#modal-container"
+                        hx-swap="innerHTML" >
+                        {% if survey.state == 'published' %}End Survey{% elif survey.state == 'archived' %}Restore{% elif survey.state == 'draft' %}Begin Survey{% endif %}
                     </button>
                 </li>
                 <li>

@@ -613,9 +613,11 @@ def ToggleSurveyStatus(request, uuid):
     survey = get_object_or_404(Survey, uuid=uuid, created_by=request.user)
     
     if survey.state == 'published':
-        survey.state = 'draft'
-    else:
+        survey.state = 'archived'
+    elif survey.state == 'draft':
         survey.state = 'published'
+    elif survey.state == 'archived':
+        survey.state = 'draft'
         
     survey.save()
 
@@ -630,6 +632,15 @@ def ToggleSurveyStatus(request, uuid):
     context['recent_surveys'] = Survey.objects.filter(created_by=request.user).order_by('-last_updated')[:4]
     
     return render(request, 'partials/Dashboard/tabel_with_recnt_survey.html', context)
+
+@require_POST
+@login_required
+def ToggleSurveyStatusConfirm(request, uuid):
+    """
+    Renders a confirmation modal for toggling survey status.
+    """
+    survey = get_object_or_404(Survey, uuid=uuid, created_by=request.user)
+    return render(request, 'partials/Dashboard/status_modal.html', {'survey': survey})
 
 @login_required 
 def survey_Start_View(request, uuid):
