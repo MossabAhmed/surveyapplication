@@ -1,9 +1,12 @@
+import json
 from django.http import QueryDict
 
 from survey.models import Survey
 from django.core.paginator import Paginator
 from django.db.models import Q, Count
 from datetime import  datetime
+from .models import SectionHeader
+
 
 
 def normalize_formset_indexes( data: QueryDict, prefix: str):
@@ -121,3 +124,31 @@ def get_dashboard_surveys(user, params, page_number=1):
         'start_date': start_date,
         'end_date': end_date,
     }
+
+def get_header_table(survey, format_type):
+    """Helper to get headers for the table."""
+    header = [ 'Respondent', 'Submitted At']
+    questions = survey.questions.all().order_by('position').select_related('polymorphic_ctype')
+    
+    # Filter out SectionHeaders
+    data_questions = [q for q in questions if not isinstance(q, SectionHeader)]
+    
+    if format_type == "raw":
+        for q in data_questions:
+            header.append(q.label)
+    else:
+        for q in data_questions:
+            if q.NAME in ["Likert Question", "Multi-Choice Question"]:
+                for option in q.options:
+                    header.append(f"{q.label} [{option}]")
+            elif q.NAME == "Matrix Question":
+                for row in q.rows:
+                    for col in q.columns:
+                        header.append(f"{q.label} [{row} - {col}]")
+            elif q.NAME == "Ranking Question":
+                for op in q.options:
+                    header.append(f"{q.label} [{op}]")
+            else:
+                header.append(q.label)
+
+    return header, data_questions

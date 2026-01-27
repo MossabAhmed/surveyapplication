@@ -26,6 +26,15 @@
       </div>
 
       <div class="flex items-center gap-3 shrink-0">
+        <!-- View Data Grid Button -->
+        <a href="{% url 'SurveyDataGrid' survey.uuid %}" class="btn bg-white border-gray-200 text-gray-700 hover:bg-gray-50 hover:border-indigo-200 hover:text-indigo-600 gap-4 normal-case text-base px-6 h-12 rounded-xl shadow-sm hover:shadow-lg hover:shadow-indigo-500/20 hover:-translate-y-0.5 transition-all duration-300">
+            <i class="fa-solid fa-table"></i>
+              <div>
+              <p class="font-semibold">View Data Grid</p>
+              <p class="text-xs text-gray-500 group-hover:text-indigo-500">Preview & Export</p>
+            </div>
+        </a>
+
          <a href="{% url 'SurveyAnalytics' survey.uuid %}" class="btn btn-primary gap-2 normal-case text-base px-6 h-12 rounded-xl shadow-lg shadow-primary/30 hover:shadow-primary/50 hover:-translate-y-0.5 transition-all duration-300">
           <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
