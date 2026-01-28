@@ -1,5 +1,6 @@
 from django import forms
 from django.forms import BooleanField, HiddenInput
+import csv
 import json
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, render
@@ -16,11 +17,13 @@ from django.views import View
 from django.views.generic import CreateView, UpdateView, DeleteView, DetailView
 from django.shortcuts import redirect
 from django.urls import reverse
-from .utility import normalize_formset_indexes, get_dashboard_surveys
+from .utility import normalize_formset_indexes, get_dashboard_surveys, get_header_table
 from django.urls import reverse_lazy
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import login
 from django.contrib.auth.mixins import LoginRequiredMixin
+import zipfile
+import io
 
 
 
@@ -589,13 +592,13 @@ def GetChartData(request, uuid, question_id):
 @login_required
 def SurveyResponsesOverviewTable(request, uuid):
     """
-    Returns the HTML for the responses overview table (numeric values).
+    Returns the HTML for the responses overview table.
     """
     survey = get_object_or_404(Survey, uuid=uuid, created_by=request.user)
     # Exclude SectionHeader from the questions list
     questions = survey.questions.instance_of(Question).not_instance_of(SectionHeader).order_by('position')
     
-    responses_list = Response.objects.filter(survey=survey).order_by('-created_at').prefetch_related('answers__question')
+    responses_list = Response.objects.filter(survey=survey).prefetch_related('answers').order_by('-created_at')
     
     # Pagination
     paginator = Paginator(responses_list, 20)  # Show 20 responses per page
@@ -613,10 +616,7 @@ def SurveyResponsesOverviewTable(request, uuid):
             answer = response_answers.get(question.id)
             if answer:
                 # Use the new method we added to the models
-                numeric_value = question.get_numeric_answer(answer.answer_data)
-                row['cells'].append(numeric_value)
-            else:
-                row['cells'].append("-")
+                row['cells'].append(answer.answer_data if answer.answer_data is not None else "N/A")
         table_data.append(row)
         
     context = {
@@ -730,7 +730,13 @@ def survey_submit(request, uuid):
             with transaction.atomic():
                 response = Response.objects.create(survey=survey)
                 
+                section_index = 1
                 for question in survey.questions.all():
+                    
+                    if isinstance(question, SectionHeader):
+
+                        continue  # Skip SectionHeader questions
+
                     base_key = f'question_{question.position}'
                     values = request.POST.getlist(base_key)
                     
@@ -748,7 +754,7 @@ def survey_submit(request, uuid):
                     elif question.NAME == 'Ranking Question':
                         if values:
                             # Save as dict where key is the rank (1-based)
-                            answer_data = {str(i): val for i, val in enumerate(values[::-1], start=1)}
+                            answer_data = {val: str(i) for i, val in enumerate(values[::-1], start=1)}
                         else:
                             answer_data = None
 
@@ -769,7 +775,8 @@ def survey_submit(request, uuid):
                         Answer.objects.create(
                             response=response,
                             question=question,
-                            answer_data=answer_data
+                            answer_data=answer_data,
+                            section=section_index
                         )
         
         except Exception as e:
@@ -777,3 +784,275 @@ def survey_submit(request, uuid):
             return HttpResponse("An error occurred while submitting the survey.", status=500)
             
         return render(request, 'Thanks.html', {'survey': survey})
+
+@login_required
+def export_survey_data(request, uuid):
+    """
+    Export survey responses.
+    - If view='flat': Returns a single CSV file.
+    - If view='sections': Returns a ZIP file containing separate CSVs for each section.
+    Supports customization of headers via POST request.
+    """
+    survey = get_object_or_404(Survey, uuid=uuid, created_by=request.user)
+    
+    # Parameters can come from POST (Grid Form) or GET (Direct Link)
+    if request.method == 'POST':
+        format_type = request.POST.get('format', 'raw')
+        view_mode = request.POST.get('view', 'flat')
+        custom_headers = request.POST.getlist('custom_headers')
+    else:
+        format_type = request.GET.get('format', 'raw')
+        view_mode = request.GET.get('view', 'flat')
+        custom_headers = None
+
+    # Check sections existence
+    has_sections = survey.questions.instance_of(SectionHeader).exists()
+    
+    if view_mode == 'sections' and has_sections:
+        # Export as ZIP containing multiple CSVs
+        results = get_survey_data_by_sections(survey, format_type)
+        
+        # In-memory ZIP buffer
+        zip_buffer = io.BytesIO()
+        
+        with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
+            header_cursor = 0
+            
+            for section in results:
+                # Prepare CSV content for this section
+                csv_buffer = io.StringIO()
+                writer = csv.writer(csv_buffer)
+                
+                headers = section['header']
+                
+                # Apply custom headers if provided
+                # We assume the order of custom headers matches the concatenation of all section headers
+                if custom_headers:
+                    count = len(headers)
+                    # Safety check to ensure we don't go out of bounds
+                    if header_cursor + count <= len(custom_headers):
+                        headers = custom_headers[header_cursor : header_cursor + count]
+                        header_cursor += count
+                
+                writer.writerow(headers)
+                writer.writerows(section['rows'])
+                
+                # Sanitize filename
+                safe_title = section['title'].replace('/', '_').replace('\\', '_').strip() or "Section"
+                filename = f"{safe_title}.csv"
+                
+                # Write CSV to ZIP
+                zip_file.writestr(filename, csv_buffer.getvalue())
+                
+        # Prepare response
+        zip_buffer.seek(0)
+        response = HttpResponse(zip_buffer, content_type='application/zip')
+        filename = f"{survey.title.replace(' ','_')}_Sections_{format_type}.zip"
+        response['Content-Disposition'] = f'attachment; filename="{filename}"'
+        return response
+            
+    else:
+        # Export as Single Flat CSV
+        response = HttpResponse(content_type='text/csv')
+        filename = f"{survey.title.replace(' ','_')}_{view_mode}_{format_type}.csv"
+        response['Content-Disposition'] = f'attachment; filename="{filename}"'
+        
+        writer = csv.writer(response)
+        
+        # Export as Flat Table
+        header, rows, _ = get_survey_export_data(survey, format_type)
+        
+        if custom_headers:
+            # Basic validation: only replace if lengths match to avoid misalignment
+            if len(custom_headers) == len(header):
+                header = custom_headers
+        
+        writer.writerow(header)
+        writer.writerows(rows)
+        
+        return response
+
+
+# refactor
+def get_survey_data_by_sections(survey, format_type='raw', responses=None):     
+    """Helper to organize data by survey sections."""
+    sections_struct = []
+    
+    # 1. Group questions by section
+    current_section = {"title": f"{survey.title} / Start", "questions": []}
+    sections_struct.append(current_section)
+    
+    all_questions = survey.questions.all().select_related('polymorphic_ctype').order_by('position')
+    
+    for q in all_questions:
+        if isinstance(q, SectionHeader):
+            current_section = {"title": f"{survey.title} / {q.label}", "questions": []}
+            sections_struct.append(current_section)
+        else:
+            current_section["questions"].append(q)
+            
+    # Remove empty sections
+    sections_struct = [s for s in sections_struct if s["questions"]]
+    
+    # 2. Build data for each section
+    if responses is None:
+        responses = Response.objects.filter(survey=survey).prefetch_related('answers').order_by('-created_at')
+
+    results = []
+    
+    for section in sections_struct:
+        title = section['title']
+        questions = section['questions']
+        
+        # Headers
+        header = ['Respondent', 'Submitted At']
+        
+        if format_type == 'numeric':
+            for q in questions:
+                # IMPORTANT: Polymorphic 'q' required for attribute access (options, rows, etc.)
+                if q.NAME in ["Likert Question", "Multi-Choice Question"]:
+                    for option in q.options:
+                        header.append(f"{q.label} [{option}]")
+                elif q.NAME == "Matrix Question":
+                    for row in q.rows:
+                        for col in q.columns:
+                            header.append(f"{q.label} [{row} - {col}]")
+                elif q.NAME == "Ranking Question":
+                    for op in q.options:
+                        header.append(f"{q.label} [{op}]")
+                else:
+                    header.append(q.label)
+        else:
+            header.extend([q.label for q in questions])
+
+        section_rows = []
+        for resp in responses:
+            base_info = [
+                resp.respondent.username if resp.respondent else 'Anonymous',
+                resp.created_at.strftime('%Y-%m-%d %H:%M:%S'),
+            ]
+            
+            answers_map = {ans.question_id: ans for ans in resp.answers.all()}
+            
+            row_cells = []
+            for q in questions:
+                ans = answers_map.get(q.id)
+                val = ans.answer_data if ans else None
+
+                if format_type == 'numeric':
+                    row_data = q.get_numeric_answer(val)
+                    if isinstance(row_data, list):
+                        row_cells.extend(row_data)
+                    else:
+                        row_cells.append(row_data)     
+                else:
+                    if isinstance(val, list):
+                         row_cells.append(" | ".join([str(v) for v in val]))
+                    elif isinstance(val, dict):
+                         # Format dicts nicely (e.g. for Matrix or Ranking)
+                         formatted_items = []
+                         for k, v in val.items():
+                             formatted_items.append(f"{k}: '{v}'")
+                         row_cells.append(" | ".join(formatted_items))
+                    else:
+                        row_cells.append(val)
+
+            section_rows.append(base_info + row_cells)
+
+        results.append({
+            'title': title,
+            'header': header,
+            'rows': section_rows
+        })
+        
+    return results
+
+def get_survey_export_data(survey, format_type='raw', responses=None):
+    """Helper to generate rows for survey data export/view."""
+
+    header, data_questions = get_header_table(survey, format_type)
+      
+
+    # Optimized Data Fetching: Prefetch answers to avoid N+1 queries
+    if responses is None:
+        responses = Response.objects.filter(survey=survey).prefetch_related('answers').order_by('-created_at')
+    
+    rows = []
+    for resp in responses:
+        row = [
+            resp.respondent.username if resp.respondent else 'Anonymous',
+            resp.created_at.strftime('%Y-%m-%d %H:%M:%S')
+        ]
+        
+        answers_map = {ans.question_id: ans for ans in resp.answers.all()}
+        
+        for q in data_questions:
+            ans = answers_map.get(q.id)
+            val = ans.answer_data if ans else None
+
+            if format_type == 'numeric':
+                row_data = q.get_numeric_answer(val)
+                if isinstance(row_data, list):
+                    row.extend(row_data)
+                else:
+                    row.append(row_data)     
+            else:
+                if isinstance(val, list):
+                     row.append(" | ".join([str(v) for v in val]))
+                elif isinstance(val, dict):
+                     # Format dicts nicely (e.g. for Matrix or Ranking)
+                     formatted_items = []
+                     for k, v in val.items():
+                         formatted_items.append(f"{k}: {v}")
+                     row.append(" | ".join(formatted_items))
+                else:
+                    row.append(val)
+        rows.append(row)        
+        
+    return header, rows, data_questions
+
+@login_required
+def SurveyDataGrid(request, uuid):
+    """Display survey data in a table format."""
+    survey = get_object_or_404(Survey, uuid=uuid, created_by=request.user)
+    format_type = request.GET.get('format', 'raw') # 'raw' or 'numeric'
+    view_mode = request.GET.get('view', 'flat') # 'flat' or 'sections'
+    
+    # Check if survey has any sections to enable the toggle
+    has_sections = survey.questions.instance_of(SectionHeader).exists()
+    
+    # Setup Pagination
+    page_number = request.GET.get('page', 1)
+    
+    # Base Queryset
+    responses_qs = Response.objects.filter(survey=survey).prefetch_related('answers').order_by('-created_at')
+    
+    # Determine items per page based on view mode
+    if view_mode == 'sections' and has_sections:
+        per_page = 8
+    else:
+        per_page = 13
+        
+    paginator = Paginator(responses_qs, per_page)
+    page_obj = paginator.get_page(page_number)
+    
+    context = {
+        'survey': survey,
+        'format_type': format_type,
+        'view_mode': view_mode,
+        'has_sections': has_sections,
+        'page_obj': page_obj,
+    }
+    
+    if view_mode == 'sections' and has_sections:
+        sections_data = get_survey_data_by_sections(survey, format_type, responses=page_obj)
+        context['sections_data'] = sections_data
+    else:
+        header, rows, _ = get_survey_export_data(survey, format_type, responses=page_obj)
+        context['header'] = header
+        context['rows'] = rows
+        
+    if request.headers.get('HX-Request') == 'true':
+        return render(request, 'partials/SurveyDataGrid/grid_view.html', context)
+        
+    return render(request, 'SurveyDataGrid.html', context)
