@@ -329,15 +329,14 @@ class RankQuestion(Question):
 
     def get_numeric_answer(self, answer_data):
         """
-        Convert ranking answer to numeric value representing the top choice's index.
+        Returns the index (0-based) of the first choice in the options list.
+        This treats the #1 ranked item as the 'selected' value.
         """
-        
-        if not answer_data or isinstance(answer_data, list) or len(answer_data) == 0:
+        if not answer_data or not isinstance(answer_data, list) or len(answer_data) == 0:
             return ""
-        
         try:
             # Return index of the first item in the ranking
-            first_choice = answer_data[max(answer_data, key=int)] # Get the top-ranked item 
+            first_choice = answer_data[0]
             if first_choice in self.options:
                  return str(self.options.index(first_choice))
         except (ValueError, AttributeError):
@@ -347,21 +346,20 @@ class RankQuestion(Question):
     def get_average_ranks(self):
         """
         Returns a dict of {option_name: average_rank_position}.
-        hi number = Better rank (1st place, 2nd place, etc.)
+        Lower number = Better rank (1st place, 2nd place, etc.)
         """
         answers = Answer.objects.filter(question=self)
         stats = {opt: {'sum': 0, 'count': 0} for opt in self.options}
         
         for answer in answers:
-            # answer_data is expected to be a dict {'5': 'Option A', '4': 'Option B'}
-            ranking_dict = answer.answer_data 
-            if isinstance(ranking_dict, dict):
-                for score, item in ranking_dict.items():
-                        try:
-                            stats[item]['sum'] += int(score)
-                            stats[item]['count'] += 1
-                        except (ValueError, TypeError):
-                            pass
+            # answer_data is expected to be an ordered list ['Option A', 'Option B']
+            ranking_list = answer.answer_data 
+            if isinstance(ranking_list, list):
+                for index, item in enumerate(ranking_list):
+                    if item in stats:
+                        # index + 1 because rank starts at 1, not 0
+                        stats[item]['sum'] += (index + 1)
+                        stats[item]['count'] += 1
         
         results = {}
         for opt, data in stats.items():
@@ -370,8 +368,8 @@ class RankQuestion(Question):
             else:
                 results[opt] = 0
         
-        # Sort by rank (highest score is best)
-        return dict(sorted(results.items(), key=lambda item: item[1], reverse=True))
+        # Sort by rank (lowest score is best)
+        return dict(sorted(results.items(), key=lambda item: item[1]))
 
 class Response(models.Model):
     survey = models.ForeignKey(Survey, on_delete=models.CASCADE, related_name='responses')

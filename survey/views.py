@@ -161,9 +161,6 @@ class AddQuestionFormView(LoginRequiredMixin, View):
 
         question_type_name = request.POST.get('question_type')      
   
-        if question_type_name not in Question.get_available_type_names():
-            return HttpResponse(status=400)
-        
         # Map question type names to their corresponding Model and Form classes
         ModelFormMap = {
            'Multi-Choice Question': MultiChoiceQuestionForm,
@@ -175,18 +172,42 @@ class AddQuestionFormView(LoginRequiredMixin, View):
             'Section Header': SectionHeaderForm,
         }
 
-        print(question_type_name)
-        FormClass = ModelFormMap[question_type_name]
+        # 1. Try direct match (English environment)
+        mapped_key = None
+        if question_type_name in ModelFormMap:
+            mapped_key = question_type_name
+        else:
+            # 2. Try to reverse lookup by iterating subclasses and checking their translated NAME
+            for subclass in Question.__subclasses__():
+                # Compare the translated NAME (from the request) with the class's NAME attribute
+                if hasattr(subclass, 'NAME') and str(subclass.NAME) == question_type_name:
+                    
+                    # Hardcoded mapping based on class name to get back to the English key
+                    class_name = subclass.__name__
+                    if class_name == 'MultiChoiceQuestion': mapped_key = 'Multi-Choice Question'
+                    elif class_name == 'LikertQuestion': mapped_key = 'Likert Question'
+                    elif class_name == 'MatrixQuestion': mapped_key = 'Matrix Question'
+                    elif class_name == 'RatingQuestion': mapped_key = 'Rating Question'
+                    elif class_name == 'RankQuestion': mapped_key = 'Ranking Question'
+                    elif class_name == 'TextQuestion': mapped_key = 'Text Question'
+                    elif class_name == 'SectionHeader': mapped_key = 'Section Header'
+                    break
+
+        if not mapped_key:
+            return HttpResponse(status=400)
+
+        print(f"Mapped '{question_type_name}' to '{mapped_key}'")
+        FormClass = ModelFormMap[mapped_key]
 
         form = FormClass(
             prefix=f'questions-{question_index}', 
             initial={
-                'question_type': question_type_name, 
+                'question_type': mapped_key, # IMPORTANT: Save the English key, not the translated one
                 'position': question_index + 1,
             }
         )
 
-        template_name = question_type_name.replace(' ', '_')
+        template_name = mapped_key.replace(' ', '_')
         context = {
             # 'question_count': question_index + 1, # Pass the index back if the partial needs it, though not strictly for the prefix
             'form': form,
@@ -358,7 +379,7 @@ def Responses(request, page_number=1):
             pass # Ignore invalid date format
     
     # 1. Apply State Filter
-    if state_filter in ['published', 'draft', 'closed']:
+    if state_filter in ['published', 'draft', 'archived']:
         surveys = surveys.filter(state=state_filter)
     
     # 2. Apply Responses Count Filter

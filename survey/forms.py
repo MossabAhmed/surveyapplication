@@ -321,7 +321,7 @@ class RankQuestionForm(BaseQuestionForm):
 
         # 1. Validate Options
         if not options or len(options) < 2:
-            self.add_error('options', "You need at least two options to rank.")
+            self.add_error('options', _("You need at least two options to rank."))
 
         return cleaned_data
 
@@ -339,8 +339,8 @@ class TextQuestionForm(BaseQuestionForm):
         widgets = {
             **BaseQuestionForm.Meta.widgets,
             'is_long_answer': forms.CheckboxInput(attrs={'class': 'toggle toggle-primary'}),
-            'min_length': forms.NumberInput(attrs={'class': 'input input-sm input-info focus:ring-0 focus:ring-offset-0', 'placeholder': 'Min Length'}),
-            'max_length': forms.NumberInput(attrs={'class': 'input input-sm input-info focus:ring-0 focus:ring-offset-0', 'placeholder': 'Max Length'}),
+            'min_length': forms.NumberInput(attrs={'class': 'input input-sm input-info focus:ring-0 focus:ring-offset-0', 'placeholder': _('Min Length')}),
+            'max_length': forms.NumberInput(attrs={'class': 'input input-sm input-info focus:ring-0 focus:ring-offset-0', 'placeholder': _('Max Length')}),
         }
 
 
@@ -360,10 +360,10 @@ class SectionHeaderForm(BaseQuestionForm):
         fields = ['label',  'helper_text', 'position']
         widgets = {
             **BaseQuestionForm.Meta.widgets,
-            'label': forms.TextInput(attrs={'class': 'input input-md input-primary w-full font-semibold', 'placeholder': 'Section title'}),
+            'label': forms.TextInput(attrs={'class': 'input input-md input-primary w-full font-semibold', 'placeholder': _('Section Title')}),
             'helper_text': forms.TextInput(attrs={
                 'class': 'input input-bordered w-full',
-                'placeholder': 'Optional subtitle',
+                'placeholder': _('Optional subtitle'),
             }),
             'position': forms.HiddenInput(),
         }

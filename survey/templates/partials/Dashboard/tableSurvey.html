@@ -9,12 +9,12 @@ any 'recently_viewed': recently_viewed, # list of recently viewed items }
     {% url 'Dashboard' as dashboard_url %}
     {% include "partials/table_filters.html" with filter_url=dashboard_url filter_target=".survey-table-body" filter_form_id="dashboard-filter-form" show_dashboard_actions=True %}
     <!-- Table Content-->
-    <div class="overflow-x-auto">
+    <div class="overflow-x-auto min-h-[400px] pb-60">
       <table class="w-full text-sm text-left text-gray-500">
         <thead class="text-xs text-gray-700 uppercase bg-gray-100 pb-7">
           <tr>
-            <th scope="col" class="px-8 py-3 w-[18%]">{% trans "Title" %}</th>
-            <th scope="col" class="px-8 py-3 w-[32%]">{% trans "Description" %}</th>
+            <th scope="col" class="px-8 py-3 w-[18%] text-center">{% trans "Title" %}</th>
+            <th scope="col" class="px-8 py-3 w-[32%] text-center">{% trans "Description" %}</th>
             <th scope="col" class="px-8 py-3 w-[10%] text-center">{% trans "Status" %}</th>
             <th scope="col" class="px-8 py-3 w-[10%] text-center">{% trans "Responses" %}</th>
             <th scope="col" class="px-8 py-3 w-[15%] text-center">{% trans "Last Updated" %}</th>

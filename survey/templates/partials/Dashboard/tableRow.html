@@ -10,14 +10,14 @@
         {{ survey.description }}
     </td>
     <td class="px-8 py-4 text-center">
-        <span id="survey-table-status-{{ survey.uuid }}" class="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider {{ survey.status_badge_class }} ">{{ survey.state }}</span>
+        <span id="survey-table-status-{{ survey.uuid }}" class="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider {{ survey.status_badge_class }} ">{{ survey.get_state_display }}</span>
     </td>
     <!-- TODO -->
     <td class="px-8 py-4 text-center text-gray-600 font-medium pb-7">{{ survey.response_count }}</td>
     <td class="px-8 py-4 text-center text-gray-500 pb-7">{{ survey.last_updated|date:"M d, Y" }}</td>
     <!-- Dropdown menu -->
     <td class="px-8 py-4 text-center pb-7" x-data="{ open: false }">
-        <div class="dropdown dropdown-left dropdown-center">
+        <div class="dropdown dropdown-left">
             <!-- 2. The trigger button needs a tabindex -->
             <div tabindex="0"
                  role="button"

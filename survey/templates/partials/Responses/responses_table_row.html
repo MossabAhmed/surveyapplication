@@ -7,7 +7,7 @@
         {{ survey.description }}
     </td>
     <td class="px-8 py-4 text-center">
-        <span id="survey-table-status-{{ survey.uuid }}" class="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider {{ survey.status_badge_class }} ">{{ survey.state }}</span>
+        <span id="survey-table-status-{{ survey.uuid }}" class="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider {{ survey.status_badge_class }} ">{{ survey.get_state_display }}</span>
     </td>
     <td class="px-8 py-4 text-center">
         <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-primary text-white">

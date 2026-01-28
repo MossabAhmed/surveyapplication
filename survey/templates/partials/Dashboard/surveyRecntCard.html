@@ -10,7 +10,7 @@
             <!-- Status Badge Placeholder (Target for OOB swap) -->
             <span id="survey-status-badge-{{ survey.uuid }}" 
                   class="badge badge-md font-medium border-0 py-3 px-3 {{ survey.status_badge_class }}">
-                {{ survey.state|title }}
+                {{ survey.get_state_display|title }}
             </span>
         </div>
 
@@ -46,7 +46,7 @@
             <svg class="w-3 h-3 mr-1.5 opacity-70" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
-            <span class="font-medium">Updated {{ survey.last_updated|timesince }} ago</span>
+            <span class="font-medium">{% trans "Last Updated " %}{{ survey.last_updated|timesince }} {% trans " ago" %}</span>
         </div>
 
         <!-- Footer -->
@@ -80,7 +80,7 @@
                         hx-target="#modal-container"
                         hx-swap="innerHTML"
                         class="btn btn-sm btn-warning xl:max-2xl:btn-xs">
-                        End Survey
+                        {% trans "End Survey" %}
                     </button>
                 {% elif survey.state == 'draft' %}
                     <button 
@@ -88,7 +88,7 @@
                         hx-target="#modal-container"
                         hx-swap="innerHTML"
                         class="btn btn-sm btn-primary xl:max-2xl:btn-xs">
-                        Start Survey
+                        {% trans "Start Survey" %}
                     </button>
                 {% elif survey.state == 'archived' %}
                     <button 
@@ -96,7 +96,7 @@
                         hx-target="#modal-container"
                         hx-swap="innerHTML"
                         class="btn btn-sm bg-red-200 xl:max-2xl:btn-xs">
-                        Restore
+                        {% trans "Restore" %}
                     </button>
                 {% endif %}
             </div>
