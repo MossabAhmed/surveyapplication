@@ -919,5 +919,90 @@ msgstr "سيتم أيضًا حذف الردود الموجودة بشكل دائ
 msgid "Yes, Delete it"
 msgstr "نعم، احذفه"
 
-#: .\survey\templates\partials\table_filters.html:72
-msgid "start"
+#: .\survey\templates\SurveyResponseDetail.html:13
+msgid "Back to Responses"
+msgstr "العودة إلى الردود"
+
+#: .\survey\templates\SurveyResponseDetail.html:34
+msgid "View Data Grid"
+msgstr "عرض شبكة البيانات"
+
+#: .\survey\templates\SurveyResponseDetail.html:35
+msgid "Preview & Export"
+msgstr "معاينة وتصدير"
+
+#: .\survey\templates\SurveyResponseDetail.html:43
+msgid "Analytics & Reports"
+msgstr "التحليلات والتقارير"
+
+#: .\survey\templates\SurveyResponseDetail.html:155
+msgid "Individual Responses"
+msgstr "الردود الفردية"
+
+#: .\survey\templates\SurveyResponseDetail.html:169
+msgid "Responses Overview"
+msgstr "نظرة عامة على الردود"
+
+#: .\survey\templates\partials\SurveyResponseDetail\survey_responses_table_and_pagination.html:7
+msgid "Detailed list of all submitted responses"
+msgstr "قائمة مفصلة بجميع الردود المقدمة"
+
+#: .\survey\templates\partials\SurveyResponseDetail\survey_responses_table_and_pagination.html:20
+msgid "Respondent"
+msgstr "المستجيب"
+
+#: .\survey\templates\partials\SurveyResponseDetail\survey_responses_table_and_pagination.html:23
+msgid "Submitted At"
+msgstr "تم الإرسال في"
+
+#: .\survey\templates\partials\SurveyResponseDetail\survey_responses_table_body.html:19
+msgid "Member"
+msgstr "عضو"
+
+#: .\survey\templates\partials\SurveyResponseDetail\survey_responses_table_body.html:27
+msgid "Anonymous"
+msgstr "مجهول"
+
+#: .\survey\templates\partials\SurveyResponseDetail\survey_responses_table_body.html:29
+msgid "Guest"
+msgstr "زائر"
+
+#: .\survey\templates\partials\SurveyResponseDetail\survey_responses_table_body.html:56
+msgid "Completed"
+msgstr "مكتمل"
+
+#: .\survey\templates\partials\SurveyResponseDetail\survey_responses_table_body.html:61
+msgid "Incomplete"
+msgstr "غير مكتمل"
+
+#: .\survey\templates\partials\SurveyResponseDetail\survey_responses_table_body.html:70
+msgid "View Details"
+msgstr "عرض التفاصيل"
+
+#: .\survey\templates\partials\SurveyResponseDetail\survey_responses_table_body.html:88
+msgid "Response Details"
+msgstr "تفاصيل الرد"
+
+#: .\survey\templates\partials\SurveyResponseDetail\survey_responses_table_body.html:89
+msgid "by"
+msgstr "بواسطة"
+
+#: .\survey\templates\partials\SurveyResponseDetail\survey_responses_table_body.html:132
+msgid "Skipped / No answer provided"
+msgstr "تم التخطي / لم يتم تقديم إجابة"
+
+#: .\survey\templates\partials\SurveyResponseDetail\survey_responses_table_body.html:166
+msgid "Once people start taking your survey, their responses will appear here."
+msgstr "بمجرد أن يبدأ الأشخاص في إجراء الاستبيان الخاص بك، ستظهر ردودهم هنا."
+
+#: .\survey\templates\partials\SurveyResponseDetail\responses_overview_table.html:6
+msgid "Matrix view of all given answers"
+msgstr "عرض مصفوفة لجميع الإجابات المقدمة"
+
+#: .\survey\templates\partials\SurveyResponseDetail\responses_overview_table.html:154
+msgid "Page"
+msgstr "صفحة"
+
+#: .\survey\templates\partials\SurveyResponseDetail\response_detail_modal_content.html:67
+msgid "Got it"
+msgstr "فهمت"

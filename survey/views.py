@@ -462,6 +462,12 @@ def SurveyResponseDetail(request, uuid):
     return render(request, 'SurveyResponseDetail.html', context)
 
 @login_required
+def GetResponseDetail(request, response_id):
+    """Returns the detail of a single response for modal display"""
+    response_obj = get_object_or_404(Response, id=response_id, survey__created_by=request.user)
+    return render(request, 'partials/SurveyResponseDetail/response_detail_modal_content.html', {'response': response_obj})
+
+@login_required
 def SurveyAnalytics(request, uuid):
     """Analytics and charts for a specific survey"""
     survey = get_object_or_404(Survey, uuid=uuid, created_by=request.user)
