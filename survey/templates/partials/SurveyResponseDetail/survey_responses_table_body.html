@@ -1,6 +1,6 @@
 {% load i18n %}
 {% for response in responses %}
-<tr class="group hover:bg-slate-50 transition-all duration-200 ease-in-out border-l-4 border-l-transparent hover:border-l-primary hover:shadow-sm relative">
+<tr class="group hover:bg-slate-50 transition-all duration-200 ease-in-out border-l-4 rtl:border-l-0 rtl:border-r-4 ltr:border-l-transparent rtl:border-r-transparent ltr:hover:border-l-primary rtl:hover:border-r-primary hover:shadow-sm relative">
   <!-- Index -->
   <td class="px-6 py-5 min-w-[180px] whitespace-nowrap text-center text-sm font-bold text-slate-400 group-hover:text-primary transition-colors">
     {{ forloop.counter | add:responses.start_index | add:-1 }}

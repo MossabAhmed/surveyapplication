@@ -1006,3 +1006,39 @@ msgstr "صفحة"
 #: .\survey\templates\partials\SurveyResponseDetail\response_detail_modal_content.html:67
 msgid "Got it"
 msgstr "فهمت"
+
+#: .\survey\templates\partials\SurveyDataGrid/grid_view.html:16
+msgid "Back to Details"
+msgstr "العودة إلى التفاصيل"
+
+#: .\survey\templates\partials\SurveyDataGrid/grid_view.html:19
+msgid "Data Grid"
+msgstr "شبكة البيانات"
+
+#: .\survey\templates\partials\SurveyDataGrid/grid_view.html:21
+msgid "View and export all responses in tabular format."
+msgstr "عرض وتصدير جميع الردود في شكل جدولي."
+
+#: .\survey\templates\partials\SurveyDataGrid/grid_view.html:43
+msgid "By Section"
+msgstr "بالقسم"
+
+#: .\survey\templates\partials\SurveyDataGrid/grid_view.html:43
+msgid "Raw Data"
+msgstr "البيانات الخام"
+
+#: .\survey\templates\partials\SurveyDataGrid/grid_view.html:64
+msgid "Numeric Data"
+msgstr "البيانات الرقمية"
+
+#: .\survey\templates\partials\SurveyDataGrid/grid_view.html:73
+msgid "Download CSV"
+msgstr "تنزيل CSV"
+
+#: .\survey\templates\partials\SurveyDataGrid/grid_view.html:116
+msgid "No responses found for this section."
+msgstr "لم يتم العثور على ردود لهذا القسم."
+
+#: .\survey\templates\partials\SurveyDataGrid/grid_view.html:159
+msgid "No responses found."
+msgstr "لم يتم العثور على ردود."
