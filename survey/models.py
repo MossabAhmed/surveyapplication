@@ -541,7 +541,7 @@ class RankQuestion(Question):
         Returns the index (0-based) of the first choice in the options list.
         This treats the #1 ranked item as the 'selected' value.
         """
-        if not answer_data or not isinstance(answer_data, list) or len(answer_data) == 0:
+        if not answer_data or isinstance(answer_data, list) or len(answer_data) == 0:
             return ""
         
         row = []
