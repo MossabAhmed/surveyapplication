@@ -736,15 +736,15 @@ def survey_submit(request, uuid):
                             if val:
                                 answer_data[row_label] = val
                             else:
-                                answer_data[row_label] = 'N\A'
+                                answer_data[row_label] = ""  # some default value
 
-
+                    # TODO: handle if the question was skipped
                     elif question.NAME == 'Ranking Question':
                         if values:
                             # Save as dict where key is the rank (1-based)
                             answer_data = {val: str(i) for i, val in enumerate(values[::-1], start=1)}
                         else:
-                            answer_data = 'N\A'
+                            answer_data = 0
 
                     else:
                         if len(values) > 1:
@@ -752,7 +752,7 @@ def survey_submit(request, uuid):
                         elif len(values) == 1:
                             answer_data = values[0] # Single string handling
                         else:
-                            answer_data = "N/A"
+                            answer_data = ''
                     
                     # 2. Server-side Validation
                     if question.required and not answer_data:

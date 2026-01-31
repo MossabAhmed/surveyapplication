@@ -72,7 +72,7 @@
             <!-- 1. MULTI-CHOICE -->
             {% if q.NAME == multi_choice_question %}
             <div class="flex flex-col gap-3" 
-                {% if q.required and q.allow_multiple %}data-required-checkbox-group{% endif %}
+                {% if q.allow_multiple and q.required or q.allow_multiple and q.the_minimum_number_of_options_to_be_selected > 1 %} data-required-checkbox-group{% endif %}
                 {% if q.allow_multiple %}data-min-required="{{ q.the_minimum_number_of_options_to_be_selected }}"{% endif %}>
                 {% for option in q.options|shuffle_if:q.randomize_options %}
                 <label class="group relative flex items-center p-4 rounded-xl border border-slate-200 bg-slate-50/50 cursor-pointer transition-all duration-200 
@@ -89,12 +89,14 @@
                 </label>
                 {% endfor %}
             </div>
-            {% if q.allow_multiple and q.the_minimum_number_of_options_to_be_selected > 1 %}
-                 <p class="text-xs text-info mb-2 flex items-center gap-1">
-                    <i class="fa-solid fa-circle-info"></i>
-                    {% trans "Please select at least" %} {{ q.the_minimum_number_of_options_to_be_selected }} {% trans "options." %}
-                 </p>
-            {% endif %}
+            
+            <p class="checkbox-group-error text-sm text-info hidden mt-2">
+                <span class="flex items-center gap-2">
+                    <i class="fa-solid fa-circle-exclamation"></i>
+                    {% trans "Please select at least" %} {{ q.the_minimum_number_of_options_to_be_selected }} {% trans "option(s)." %}
+                </span>
+            </p>
+
             <!-- 2. LIKERT -->
             {% elif q.NAME == likert_question %}
                 <div class="mt-4">

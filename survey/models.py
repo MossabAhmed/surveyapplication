@@ -114,10 +114,7 @@ class MultiChoiceQuestion(Question):
         return distribution
 
     def get_numeric_answer(self, val):
-        """Convert answer text to a single numeric value using 0/1"""
-        if not val:
-            return ""
-    
+        """Convert answer text to a single numeric value using 0/1"""    
         if isinstance(val, list):
             return ['1' if option in val else "0" for option in self.options]
         else: 
@@ -215,8 +212,6 @@ class LikertQuestion(Question):
     
     def get_numeric_answer(self, val):
         """Convert answer text to a single numeric value using 0/1"""
-        if not val:
-            return ""
 
         return ['1' if val == option else '0' for option in self.options]
 
@@ -364,16 +359,12 @@ class MatrixQuestion(Question):
         return distribution
 
     def get_numeric_answer(self, val):
-        """convert each row to a single numeric value as a Like Question"""
-
-        if not val:
-            return ""
-        
+        """convert each row to a single numeric value as a Like Question"""        
         row = []
         for i, row_label in enumerate(self.rows, start=1):
             for col in self.columns:
                 key = f'{row_label}_row{i}'
-                selected_col = val.get(key) if isinstance(val, dict) else None
+                selected_col = val.get(key) if isinstance(val, dict) else '0'
                 row.append("1" if (selected_col == col) else "0")
         return row       
 class TextQuestion(Question):
@@ -489,7 +480,7 @@ class RatingQuestion(Question):
     def get_numeric_answer(self, answer_data):
         """Returns the rating value directly."""
         if answer_data is None or answer_data == "":
-            return ""
+            return "NaN"
         return str(answer_data)
 
     def get_average_rating(self):

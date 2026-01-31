@@ -400,6 +400,7 @@ def get_correlation_table(survey, questions_id: list = None):
     df_clean = df.drop(columns=[c for c in cols_to_drop if c in df.columns], errors='ignore')
     df_clean = df_clean.apply(pd.to_numeric, errors='coerce')
     df_clean = df_clean.dropna(axis=1, how='all') # Drop empty cols
+    df_clean = df_clean.fillna(0)
     
     # Need at least 2 columns with variance for correlation
     if df_clean.shape[1] < 2:
