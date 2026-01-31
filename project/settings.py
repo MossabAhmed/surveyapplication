@@ -167,3 +167,6 @@ LOGOUT_REDIRECT_URL = 'account_login'
 
 # to skip confirmation page (all-Auth) for social login
 SOCIALACCOUNT_LOGIN_ON_GET = True
+
+# Email Backend for development (prints emails to console)
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'

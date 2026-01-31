@@ -36,16 +36,6 @@ class RespondentLoginView(LoginView):
 class RespondentSignupView(SignupView):
     template_name = 'account/signup.html'
     extra_context = {'is_respondent': True}
-# class SignUpView(CreateView):
-#     form_class = CustomUserCreationForm
-#     success_url = reverse_lazy('Dashboard')
-#     template_name = 'registration/signup.html'
-
-#     def form_valid(self, form):
-#         # Save user and log them in
-#         user = form.save()
-#         login(self.request, user)
-#         return redirect(self.success_url)
 
 @login_required
 def create_survey(request):
