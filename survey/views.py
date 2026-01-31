@@ -64,11 +64,13 @@ def create_survey(request):
                 survey = form.save(commit=False)
                 survey.state = 'draft' # Previewing now saves as draft
                 survey.created_by = request.user
-                survey.question_count = question_formset.total_form_count()
                 survey.save()
                 
                 question_formset.instance = survey
                 question_formset.save()
+
+                survey.question_count = survey.real_question_count
+                survey.save(update_fields=['question_count'])
 
             # Redirect to the dedicated preview view, passing the Edit URL as the "back" link
             preview_url = reverse('SurveyPreview', args=[survey.uuid])
@@ -80,11 +82,13 @@ def create_survey(request):
             action = request.POST.get('action')
             survey.state = 'published' if action == 'publish' else 'draft'
             survey.created_by = request.user
-            survey.question_count = question_formset.total_form_count()
             survey.save()
 
             question_formset.instance = survey
             question_formset.save()
+
+            survey.question_count = survey.real_question_count
+            survey.save(update_fields=['question_count'])
 
         return redirect('/Dashboard')
 
@@ -119,11 +123,13 @@ def edit_survey(request, uuid):
         if request.POST.get('action') == 'preview':
             with transaction.atomic():
                 updated_survey = form.save(commit=False)
-                updated_survey.question_count = question_formset.total_form_count()
                 updated_survey.save()
 
                 question_formset.instance = updated_survey
                 question_formset.save()
+
+                updated_survey.question_count = updated_survey.real_question_count
+                updated_survey.save(update_fields=['question_count'])
 
             # Redirect to the dedicated preview view, passing the Edit URL as the "back" link
             preview_url = reverse('SurveyPreview', args=[updated_survey.uuid])
@@ -134,11 +140,13 @@ def edit_survey(request, uuid):
             updated_survey = form.save(commit=False)
             action = request.POST.get('action')
             updated_survey.state = 'published' if action == 'publish' else 'draft'
-            updated_survey.question_count = question_formset.total_form_count()
             updated_survey.save()
 
             question_formset.instance = updated_survey
             question_formset.save()
+
+            updated_survey.question_count = updated_survey.real_question_count
+            updated_survey.save(update_fields=['question_count'])
 
         return redirect('/Dashboard')
 
@@ -470,7 +478,34 @@ def SurveyResponseDetail(request, uuid):
 def GetResponseDetail(request, response_id):
     """Returns the detail of a single response for modal display"""
     response_obj = get_object_or_404(Response, id=response_id, survey__created_by=request.user)
-    return render(request, 'partials/SurveyResponseDetail/response_detail_modal_content.html', {'response': response_obj})
+    
+    # 1. Get all questions for this survey to build the position map (excluding sections)
+    survey = response_obj.survey
+    all_questions = survey.questions.all().order_by('position')
+    
+    # map question_id -> visual_index (1, 2, 3...)
+    question_position_map = {}
+    current_index = 1
+    for q in all_questions:
+        if not isinstance(q, SectionHeader):
+            question_position_map[q.id] = current_index
+            current_index += 1
+            
+    # 2. Get answers and annotate them with the visual index
+    answers = response_obj.answers.select_related('question').order_by('question__position')
+    
+    # We turn the queryset into a list to attach dynamic attributes 
+    # (or we could just use a dictionary lookup in the template if we had a filter, 
+    # but processing here is safer)
+    annotated_answers = []
+    for answer in answers:
+        answer.real_position = question_position_map.get(answer.question_id, answer.question.position)
+        annotated_answers.append(answer)
+
+    return render(request, 'partials/SurveyResponseDetail/response_detail_modal_content.html', {
+        'response': response_obj,
+        'answers': annotated_answers
+    })
 
 @login_required
 def SurveyAnalytics(request, uuid):
@@ -760,10 +795,17 @@ def ToggleSurveyStatusConfirm(request, uuid):
     survey = get_object_or_404(Survey, uuid=uuid, created_by=request.user)
     return render(request, 'partials/Dashboard/status_modal.html', {'survey': survey})
 
-@login_required 
 def survey_Start_View(request, uuid):
     """View to start taking the survey."""
     survey = get_object_or_404(Survey, uuid=uuid, state='published')
+    
+    # Check if user has already submitted the survey
+    if request.user.is_authenticated:
+        if Response.objects.filter(survey=survey, respondent=request.user).exists():
+            return render(request, 'Thanks.html', {'survey': survey, 'message': 'You have already submitted this survey.'})
+    elif request.session.get(f'survey_submitted_{survey.uuid}'):
+        return render(request, 'Thanks.html', {'survey': survey, 'message': 'You have already submitted this survey.'})
+
     questions = survey.questions.all().order_by('position')
     
     context = {
@@ -824,10 +866,22 @@ def CopySurveyView(request, uuid):
 def survey_submit(request, uuid):
     """Submit the survey responses."""
     survey = get_object_or_404(Survey, uuid=uuid)
+
+    # Check if user has already submitted the survey (validation)
+    if request.user.is_authenticated:
+        if Response.objects.filter(survey=survey, respondent=request.user).exists():
+            return render(request, 'Thanks.html', {'survey': survey, 'message': 'You have already submitted this survey.'})
+    elif request.session.get(f'survey_submitted_{survey.uuid}'):
+        return render(request, 'Thanks.html', {'survey': survey, 'message': 'You have already submitted this survey.'})
+
     if request.method == 'POST':
         try:
             with transaction.atomic():
-                response = Response.objects.create(survey=survey)
+                respondent = None
+                if request.user.is_authenticated and not survey.anonymous_responses:
+                    respondent = request.user
+                
+                response = Response.objects.create(survey=survey, respondent=respondent)
                 
                 section_index = 1
                 for question in survey.questions.all():
@@ -892,6 +946,7 @@ def survey_submit(request, uuid):
             # Handle exceptions, possibly logging or user feedback
             return HttpResponse("An error occurred while submitting the survey.", status=500)
             
+        request.session[f'survey_submitted_{survey.uuid}'] = True
         return render(request, 'Thanks.html', {'survey': survey})
 
 @login_required

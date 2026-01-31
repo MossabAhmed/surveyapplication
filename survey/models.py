@@ -43,6 +43,10 @@ class Survey(models.Model):
         elif self.state == 'archived':
             return 'bg-red-200 text-black'
         return 'bg-gray-100 text-black'
+
+    @property
+    def real_question_count(self):
+        return self.questions.exclude(polymorphic_ctype__model='sectionheader').count()
     
     @property
     def response_count(self):
