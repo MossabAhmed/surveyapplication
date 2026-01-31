@@ -186,7 +186,7 @@ class LikertQuestion(Question):
             return 0 # Avoid division by zero
             
         t_stat = (mean - hypothetical_mean) / (std_dev / math.sqrt(n))
-        return round(t_stat, 2)
+        return round(t_stat, 5)
     
     def get_rating_distribution(self):
         """Get distribution of ratings"""
@@ -320,7 +320,7 @@ class MatrixQuestion(Question):
                     'mean': round(statistics.mean(scores), 2),
                     'median': round(statistics.median(scores), 2),
                     'interpretation': interpretation, # Replaces CI
-                    't_stat': round(t_stat, 2)
+                    't_stat': round(t_stat, 5)
                 }
             else:
                  result[row] = {'mean': 0, 'median': 0, 'interpretation': 'N/A', 't_stat': 0}
@@ -376,7 +376,7 @@ class TextQuestion(Question):
 
     def get_numeric_answer(self, answer_data):
         # 1 if answered, 0 if not (simple completion metric)
-        return answer_data
+        return answer_data if answer_data else "N/A"
 
 
 class SectionHeader(Question):
@@ -401,6 +401,8 @@ class RatingQuestion(Question):
         scores = []
         for answer in answers:
             try:
+                if answer.answer_data is '':
+                    continue
                 scores.append(float(answer.answer_data))
             except (ValueError, TypeError):
                 continue
@@ -419,7 +421,8 @@ class RatingQuestion(Question):
         return {
             'mean': self.get_mean(),
             'median': self.get_median(),
-            'ci': self.get_confidence_interval()
+            'ci': self.get_confidence_interval(),
+            't_stat': self.get_t_test()
         }
 
     def get_interpretation(self):
@@ -475,7 +478,7 @@ class RatingQuestion(Question):
             return 0
             
         t_stat = (mean - midpoint) / (std_dev / math.sqrt(n))
-        return round(t_stat, 2)
+        return round(t_stat, 5)
     
     def get_numeric_answer(self, answer_data):
         """Returns the rating value directly."""
@@ -493,6 +496,8 @@ class RatingQuestion(Question):
         count = 0
         for answer in answers:
             try:
+                if answer.answer_data is '':
+                    continue
                 val = float(answer.answer_data)
                 total += val
                 count += 1
@@ -515,6 +520,8 @@ class RatingQuestion(Question):
         
         for answer in answers:
             try:
+                if answer.answer_data is '':
+                    continue
                 val = int(float(answer.answer_data))
                 if val in distribution:
                     distribution[val] += 1
@@ -533,7 +540,7 @@ class RankQuestion(Question):
         This treats the #1 ranked item as the 'selected' value.
         """
         if not answer_data or isinstance(answer_data, list) or len(answer_data) == 0:
-            return ""
+            return ["NaN" for _ in self.options]
         
         row = []
         try:

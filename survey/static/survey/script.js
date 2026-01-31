@@ -226,6 +226,8 @@ document.addEventListener("alpine:init", () => {
                         const name = input.name;
                         const group = section.querySelectorAll(`input[name="${name}"]`);
                         fieldValid = Array.from(group).some(r => r.checked);
+                    } else if (input.type === 'checkbox') {
+                         fieldValid = input.checked;
                     } else {
                         fieldValid = input.value.trim() !== '';
                     }
@@ -236,7 +238,7 @@ document.addEventListener("alpine:init", () => {
                 const checkboxGroups = section.querySelectorAll('[data-required-checkbox-group]');
                 checkboxGroups.forEach(group => {
                     const minRequired = parseInt(group.getAttribute('data-min-required')) || 1;
-                    const checkedCount = group.querySelectorAll('input[type="checkbox"]:checked').length;
+                    const checkedCount = group.querySelectorAll(' input[type="checkbox"]:checked').length;
                     
                     // Show/Hide error message for this specific group
                     const errorMsg = group.parentElement.querySelector('.checkbox-group-error');
@@ -251,6 +253,33 @@ document.addEventListener("alpine:init", () => {
                 this.isValid = allValid;
             }
         }));
+
+  Alpine.data('rankingQuestion', (initialAvailable = []) => ({
+    available: initialAvailable,
+    ranked: [],
+    
+    select(index) {
+        this.ranked.push(this.available[index]);
+        this.available.splice(index, 1);
+        this.$dispatch('input'); // Trigger validation
+    },
+    unselect(index) {
+        this.available.push(this.ranked[index]);
+        this.ranked.splice(index, 1);
+        this.$dispatch('input'); // Trigger validation
+    },
+    move(index, direction) {
+            // direction: -1 for up, 1 for down
+            const newIndex = index + direction;
+            if (newIndex >= 0 && newIndex < this.ranked.length) {
+                const temp = this.ranked[index];
+                this.ranked[index] = this.ranked[newIndex];
+                this.ranked[newIndex] = temp;
+                this.$dispatch('input'); // Trigger validation
+            }
+    }
+  }));
+
 
   // --- UNSAVED CHANGES WARNING ---
   let formIsDirty = false;

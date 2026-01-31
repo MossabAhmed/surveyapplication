@@ -719,10 +719,8 @@ def survey_submit(request, uuid):
                 response = Response.objects.create(survey=survey)
                 
                 section_index = 1
-                for question in survey.questions.all():
-                    
+                for question in survey.questions.all():   
                     if isinstance(question, SectionHeader):
-
                         continue  # Skip SectionHeader questions
 
                     base_key = f'question_{question.position}'
@@ -739,13 +737,12 @@ def survey_submit(request, uuid):
                                 answer_data[row_label] = ""  # some default value
 
 
-                    # TODO: handle if the question was skipped
                     elif question.NAME == 'Ranking Question':
                         if values:
                             # Save as dict where key is the rank (1-based)
                             answer_data = {val: str(i) for i, val in enumerate(values[::-1], start=1)}
                         else:
-                            answer_data = 0
+                            answer_data = ""
 
                     else:
                         if len(values) > 1:
