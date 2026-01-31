@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="container mx-auto p-4 print:p-0 print:max-w-5xl print:mx-auto">
+<div class="container mx-auto p-4 print:w-full print:max-w-full print:mx-auto">
     <!-- Header -->
     <div class="mb-10">
         <!-- Breadcrumb / Back Navigation -->
@@ -121,6 +121,7 @@
     {% endif %}
 
     {% include "partials/SurveyAnalytics/all_question_analytics.html" %}
+    {% include "partials/SurveyAnalytics/correlation_table.html" %}
 </div>
 
 <!-- Chart.js -->
@@ -144,6 +145,14 @@ document.addEventListener('DOMContentLoaded', function() {
                 let options = {
                     responsive: true,
                     maintainAspectRatio: false,
+                    // Controls bar width globally for this chart
+                    datasets: {
+                        bar: {
+                            maxBarThickness: 40, // Max width in pixels
+                            categoryPercentage: 0.9, // Use more of the available category width
+                            barPercentage: 0.9   // Width relative to the available space (0.0 - 1.0)
+                        }
+                    },
                     plugins: {
                         legend: { display: false } // Hide legend for simple bars
                     },

@@ -30,6 +30,7 @@ urlpatterns = [
     path('responses/survey/<uuid:uuid>/analytics', views.SurveyAnalytics, name='SurveyAnalytics'),
     path('responses/survey/<uuid:uuid>/data-grid', views.SurveyDataGrid, name='SurveyDataGrid'),
     path('responses/survey/<uuid:uuid>/export', views.export_survey_data, name='export_survey_data'),
+    path('responses/survey/<uuid:uuid>/correlation', views.correlation_table, name='correlation_table'),
 
     # API endpoint for chart data
     path('api/survey/<uuid:uuid>/question/<int:question_id>/chart-data', views.GetChartData, name='GetChartData'),

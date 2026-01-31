@@ -118,10 +118,7 @@ class MultiChoiceQuestion(Question):
         return distribution
 
     def get_numeric_answer(self, val):
-        """Convert answer text to a single numeric value using 0/1"""
-        if not val:
-            return ""
-    
+        """Convert answer text to a single numeric value using 0/1"""    
         if isinstance(val, list):
             return ['1' if option in val else "0" for option in self.options]
         else: 
@@ -193,7 +190,7 @@ class LikertQuestion(Question):
             return 0 # Avoid division by zero
             
         t_stat = (mean - hypothetical_mean) / (std_dev / math.sqrt(n))
-        return round(t_stat, 2)
+        return round(t_stat, 5)
     
     def get_rating_distribution(self):
         """Get distribution of ratings"""
@@ -219,8 +216,6 @@ class LikertQuestion(Question):
     
     def get_numeric_answer(self, val):
         """Convert answer text to a single numeric value using 0/1"""
-        if not val:
-            return ""
 
         return ['1' if val == option else '0' for option in self.options]
 
@@ -329,7 +324,7 @@ class MatrixQuestion(Question):
                     'mean': round(statistics.mean(scores), 2),
                     'median': round(statistics.median(scores), 2),
                     'interpretation': interpretation, # Replaces CI
-                    't_stat': round(t_stat, 2)
+                    't_stat': round(t_stat, 5)
                 }
             else:
                  result[row] = {'mean': 0, 'median': 0, 'interpretation': 'N/A', 't_stat': 0}
@@ -368,16 +363,12 @@ class MatrixQuestion(Question):
         return distribution
 
     def get_numeric_answer(self, val):
-        """convert each row to a single numeric value as a Like Question"""
-
-        if not val:
-            return ""
-        
+        """convert each row to a single numeric value as a Like Question"""        
         row = []
         for i, row_label in enumerate(self.rows, start=1):
             for col in self.columns:
                 key = f'{row_label}_row{i}'
-                selected_col = val.get(key) if isinstance(val, dict) else None
+                selected_col = val.get(key) if isinstance(val, dict) else '0'
                 row.append("1" if (selected_col == col) else "0")
         return row       
 class TextQuestion(Question):
@@ -389,7 +380,7 @@ class TextQuestion(Question):
 
     def get_numeric_answer(self, answer_data):
         # 1 if answered, 0 if not (simple completion metric)
-        return answer_data
+        return answer_data if answer_data else "N/A"
 
 
 class SectionHeader(Question):
@@ -414,6 +405,8 @@ class RatingQuestion(Question):
         scores = []
         for answer in answers:
             try:
+                if answer.answer_data is '':
+                    continue
                 scores.append(float(answer.answer_data))
             except (ValueError, TypeError):
                 continue
@@ -432,7 +425,8 @@ class RatingQuestion(Question):
         return {
             'mean': self.get_mean(),
             'median': self.get_median(),
-            'ci': self.get_confidence_interval()
+            'ci': self.get_confidence_interval(),
+            't_stat': self.get_t_test()
         }
 
     def get_interpretation(self):
@@ -488,12 +482,12 @@ class RatingQuestion(Question):
             return 0
             
         t_stat = (mean - midpoint) / (std_dev / math.sqrt(n))
-        return round(t_stat, 2)
+        return round(t_stat, 5)
     
     def get_numeric_answer(self, answer_data):
         """Returns the rating value directly."""
         if answer_data is None or answer_data == "":
-            return ""
+            return "NaN"
         return str(answer_data)
 
     def get_average_rating(self):
@@ -506,6 +500,8 @@ class RatingQuestion(Question):
         count = 0
         for answer in answers:
             try:
+                if answer.answer_data is '':
+                    continue
                 val = float(answer.answer_data)
                 total += val
                 count += 1
@@ -528,6 +524,8 @@ class RatingQuestion(Question):
         
         for answer in answers:
             try:
+                if answer.answer_data is '':
+                    continue
                 val = int(float(answer.answer_data))
                 if val in distribution:
                     distribution[val] += 1
@@ -545,8 +543,8 @@ class RankQuestion(Question):
         Returns the index (0-based) of the first choice in the options list.
         This treats the #1 ranked item as the 'selected' value.
         """
-        if not answer_data or not isinstance(answer_data, list) or len(answer_data) == 0:
-            return ""
+        if not answer_data or isinstance(answer_data, list) or len(answer_data) == 0:
+            return ["NaN" for _ in self.options]
         
         row = []
         try:

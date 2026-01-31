@@ -72,7 +72,7 @@
             <!-- 1. MULTI-CHOICE -->
             {% if q.NAME == multi_choice_question %}
             <div class="flex flex-col gap-3" 
-                {% if q.required and q.allow_multiple %}data-required-checkbox-group{% endif %}
+                {% if q.allow_multiple and q.required or q.allow_multiple and q.the_minimum_number_of_options_to_be_selected > 1 %} data-required-checkbox-group{% endif %}
                 {% if q.allow_multiple %}data-min-required="{{ q.the_minimum_number_of_options_to_be_selected }}"{% endif %}>
                 {% for option in q.options|shuffle_if:q.randomize_options %}
                 <label class="group relative flex items-center p-4 rounded-xl border border-slate-200 bg-slate-50/50 cursor-pointer transition-all duration-200 
@@ -89,12 +89,14 @@
                 </label>
                 {% endfor %}
             </div>
-            {% if q.allow_multiple and q.the_minimum_number_of_options_to_be_selected > 1 %}
-                 <p class="text-xs text-info mb-2 flex items-center gap-1">
-                    <i class="fa-solid fa-circle-info"></i>
-                    {% trans "Please select at least" %} {{ q.the_minimum_number_of_options_to_be_selected }} {% trans "options." %}
-                 </p>
-            {% endif %}
+            
+            <p class="checkbox-group-error text-sm text-info hidden mt-2">
+                <span class="flex items-center gap-2">
+                    <i class="fa-solid fa-circle-exclamation"></i>
+                    {% trans "Please select at least" %} {{ q.the_minimum_number_of_options_to_be_selected }} {% trans "option(s)." %}
+                </span>
+            </p>
+
             <!-- 2. LIKERT -->
             {% elif q.NAME == likert_question %}
                 <div class="mt-4">
@@ -180,35 +182,93 @@
             <!-- 6. RANKING -->
             {% elif q.NAME == ranking_question %}
             <div class="mt-4" 
-                    x-data="{ 
-                    options: [
-                        {% for option in q.options %}
-                            '{{ option|escapejs }}'{% if not forloop.last %},{% endif %}
-                        {% endfor %}
-                    ],
-                    swap(fromIndex, toIndex) {
-                        if (toIndex >= 0 && toIndex < this.options.length) {
-                            const temp = this.options[fromIndex];
-                            this.options[fromIndex] = this.options[toIndex];
-                            this.options[toIndex] = temp;
-                        }
-                    }
-                    }">
-                    <template x-for="option in options" :key="option">
-                        <input type="hidden" name="question_{{ q.position }}" :value="option">
-                    </template>
-                    <!-- Re-implementing clearer ranking UI -->
-                <div class="flex flex-col gap-3" x-auto-animate>
-                    <template x-for="(option, index) in options" :key="option">
-                        <div class="group flex items-center gap-3 p-3 bg-white border border-slate-200 rounded-xl shadow-sm hover:border-primary hover:shadow-md transition-all">
-                                <div class="w-8 h-8 rounded-lg bg-slate-100 text-slate-500 font-bold flex items-center justify-center text-sm group-hover:bg-primary group-hover:text-white transition-colors" x-text="index + 1"></div>
-                                <div class="flex-grow font-medium text-slate-700" x-text="option"></div>
-                                <div class="flex flex-col gap-1">
-                                    <button type="button" @click="swap(index, index - 1)" :disabled="index === 0" class="btn btn-xs btn-ghost btn-square disabled:opacity-20 hover:bg-primary/10 hover:text-primary"><i class="fa-solid fa-caret-up"></i></button>
-                                    <button type="button" @click="swap(index, index + 1)" :disabled="index === options.length - 1" class="btn btn-xs btn-ghost btn-square disabled:opacity-20 hover:bg-primary/10 hover:text-primary"><i class="fa-solid fa-caret-down"></i></button>
+                 x-data="rankingQuestion([
+                    {% for option in q.options %}
+                        '{{ option|escapejs }}'{% if not forloop.last %},{% endif %}
+                    {% endfor %}
+                 ])">
+                
+                <!-- Hidden inputs for submission (only ranked items) -->
+                <template x-for="option in ranked" :key="option">
+                    <input type="hidden" name="question_{{ q.position }}" :value="option">
+                </template>
+
+                <!-- Validation Input: Required if question is required and not all items ranked -->
+                {% if q.required %}
+                <input type="checkbox" class="sr-only" required 
+                       :checked="available.length === 0"
+                       @click.prevent> <!-- Prevent manual checking -->
+                {% endif %}
+
+                <div class="space-y-6">
+                    <!-- Ranked List (Destination) -->
+                    <div class="space-y-2">
+                         <h4 class="text-xs font-bold text-primary uppercase tracking-wider mb-2 flex items-center gap-2">
+                            <i class="fa-solid fa-list-ol"></i> {% trans "Your Ranking" %}
+                            <span class="text-xs font-normal text-slate-400 normal-case ml-auto" x-show="ranked.length > 0">
+                                <span x-text="ranked.length"></span> {% trans "item(s) ranked" %}
+                            </span>
+                         </h4>
+                         
+                         <div class="min-h-[60px] bg-slate-50 border-2 border-dashed border-primary/20 rounded-xl p-2 transition-all"
+                              :class="{'border-primary/50 bg-primary/5': ranked.length > 0, 'flex items-center justify-center': ranked.length === 0}"
+                              x-auto-animate>
+                            
+                            <template x-show="ranked.length === 0">
+                                <div class="text-slate-400 text-sm text-center italic">
+                                    {% trans "Tap options below to add them here in order" %}
                                 </div>
-                        </div> 
-                    </template>
+                            </template>
+
+                            <template x-for="(option, index) in ranked" :key="option">
+                                <div class="flex items-center gap-3 p-3 bg-white border border-slate-200 rounded-lg shadow-sm group mb-2 last:mb-0">
+                                    <div class="flex-none w-6 h-6 rounded-full bg-primary text-white text-xs font-bold flex items-center justify-center shadow-sm" x-text="index + 1"></div>
+                                    <div class="flex-grow font-medium text-slate-700 leading-tight" x-text="option"></div>
+                                    
+                                    <!-- Controls -->
+                                    <div class="flex items-center gap-2 pl-2 border-l border-slate-100">
+                                        <div class="flex flex-col gap-0.5">
+                                            <button type="button" @click="move(index, -1)" :disabled="index === 0" 
+                                                class="w-6 h-6 flex items-center justify-center rounded hover:bg-slate-100 text-slate-400 hover:text-primary disabled:opacity-20 transition-colors" title="Move Up">
+                                                <i class="fa-solid fa-chevron-up text-[10px]"></i>
+                                            </button>
+                                            <button type="button" @click="move(index, 1)" :disabled="index === ranked.length - 1" 
+                                                class="w-6 h-6 flex items-center justify-center rounded hover:bg-slate-100 text-slate-400 hover:text-primary disabled:opacity-20 transition-colors" title="Move Down">
+                                                <i class="fa-solid fa-chevron-down text-[10px]"></i>
+                                            </button>
+                                        </div>
+                                        <button type="button" @click="unselect(index)" 
+                                            class="w-8 h-8 flex items-center justify-center rounded-lg text-slate-300 hover:text-red-500 hover:bg-red-50 transition-all" title="Remove from ranking">
+                                            <i class="fa-solid fa-trash-can sm:text-base"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </template>
+                         </div>
+                    </div>
+
+                    <!-- Available List (Source) -->
+                    <div class="space-y-2" x-show="available.length > 0" x-transition>
+                         <h4 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">{% trans "Available Options" %}</h4>
+                         <div class="flex flex-wrap gap-2" x-auto-animate>
+                            <template x-for="(option, index) in available" :key="option">
+                                <button type="button" @click="select(index)" 
+                                        class="text-left px-4 py-3 bg-white border border-slate-200 rounded-lg shadow-sm hover:border-primary hover:shadow-md hover:-translate-y-0.5 transition-all text-sm font-medium text-slate-600 group flex items-center gap-2">
+                                    <i class="fa-solid fa-plus text-primary/50 group-hover:text-primary transition-colors"></i>
+                                    <span x-text="option"></span>
+                                </button>
+                            </template>
+                         </div>
+                    </div>
+                    
+                    <!-- Error Message for Incomplete Ranking -->
+                    {% if q.required %}
+                    <p class="text-xs text-red-500 font-medium hidden mt-2" 
+                       :class="{'!flex items-center gap-2': available.length > 0 && ranked.length > 0}">
+                        <i class="fa-solid fa-circle-exclamation"></i>
+                        {% trans "Please rank all remaining options." %}
+                    </p>
+                    {% endif %}
                 </div>
             </div>
             {% endif %}

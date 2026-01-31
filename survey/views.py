@@ -17,13 +17,14 @@ from django.views import View
 from django.views.generic import CreateView, UpdateView, DeleteView, DetailView
 from django.shortcuts import redirect
 from django.urls import reverse
-from .utility import normalize_formset_indexes, get_dashboard_surveys, get_header_table
+from .utility import normalize_formset_indexes, get_dashboard_surveys, get_survey_export_data,organize_survey_sections, get_question_analytics, get_correlation_table, get_survey_data_by_sections
 from django.urls import reverse_lazy
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import login
 from django.contrib.auth.mixins import LoginRequiredMixin
 import zipfile
 import io
+from django.shortcuts import render
 
 
 
@@ -512,29 +513,10 @@ def SurveyAnalytics(request, uuid):
     """Analytics and charts for a specific survey"""
     survey = get_object_or_404(Survey, uuid=uuid, created_by=request.user)
     
-    # 1. Fetch ALL questions to determine sections
-    all_questions = survey.questions.all().order_by('position')
-    
-    # 2. Organize into sections
-    sections = []
-    # Create a default "General" or first section
-    current_section = {'id': 'initial', 'label': 'General / Introduction', 'questions': []}
-    sections.append(current_section)
-    
-    for q in all_questions:
-        if isinstance(q, SectionHeader):
-            # Start a new section
-            current_section = {'id': str(q.id), 'label': q.label, 'questions': []}
-            sections.append(current_section)
-        else:
-            # Add to current section
-            current_section['questions'].append(q)
-            
-    # Remove empty initial section if the first question is a SectionHeader
-    if not sections[0]['questions'] and len(sections) > 1:
-        sections.pop(0)
+    # 1. Organize into sections using helper
+    sections = organize_survey_sections(survey)
 
-    # 3. Handle Filtering
+    # 2. Handle Filtering
     selected_section_id = request.GET.get('section', 'all')
     questions_to_analyze = []
     current_section_label = "All Sections"
@@ -551,91 +533,9 @@ def SurveyAnalytics(request, uuid):
                 current_section_label = section['label']
                 break
     
-    # Filter out TextQuestions and ensure we aren't analyzing things we shouldn't
-    # (TextQuestion exclusion was in the original query)
-    questions_to_analyze = [
-        q for q in questions_to_analyze 
-        if not isinstance(q, TextQuestion) and not isinstance(q, SectionHeader)
-    ]
-    
-    # 4. Prepare analytics data (Logic mostly unchanged, just iterating over filtered list)
-    analytics_data = []
-    
-    for question in questions_to_analyze:  
-        question_data = {
-            'question': question,
-            'type': type(question).__name__,
-            'total_question_answers': Answer.objects.filter(question=question).count()
-        }
-        
-        if isinstance(question, MultiChoiceQuestion):
-            # Get distribution for multiple choice
-            mc_question = MultiChoiceQuestion.objects.get(pk=question.pk) 
-            distribution = mc_question.get_answer_distribution()
-            question_data['distribution'] = distribution
-            question_data['chart_type'] = 'bar'
-            
-        elif isinstance(question, LikertQuestion):
-            # Get rating distribution and average
-            likert_question = LikertQuestion.objects.get(pk=question.pk)
-            distribution = likert_question.get_rating_distribution()
-            question_data['distribution'] = distribution
-
-            # Add Mean, Median, Interpretation, and T-Test
-            question_data['mean'] = likert_question.get_mean()
-            question_data['median'] = likert_question.get_median()
-            question_data['interpretation'] = likert_question.get_interpretation()
-            question_data['t_test'] = likert_question.get_t_test()
-            
-            question_data['chart_type'] = 'bar'
-            
-        elif isinstance(question, RatingQuestion):
-            rating_question = RatingQuestion.objects.get(pk=question.pk) 
-            distribution = rating_question.get_rating_distribution()
-            
-            question_data['distribution'] = distribution
-            question_data['average'] = rating_question.get_average_rating()
-            
-            # Add Mean, Median, and T-Test
-            question_data['mean'] = rating_question.get_mean()
-            question_data['median'] = rating_question.get_median()
-            question_data['interpretation'] = rating_question.get_interpretation()
-            question_data['t_test'] = rating_question.get_t_test()
-            
-            question_data['chart_type'] = 'bar'
-            
-        elif isinstance(question, RankQuestion):
-            rank_question = RankQuestion.objects.get(pk=question.pk) 
-            distribution = rank_question.get_average_ranks()
-            question_data['distribution'] = distribution
-            question_data['chart_type'] = 'bar'
-
-        elif isinstance(question, MatrixQuestion):
-            mx_question = MatrixQuestion.objects.get(pk=question.pk) 
-            distribution = mx_question.get_matrix_distribution()
-            stats = mx_question.get_row_statistics()
-            
-            # Combine for template
-            rows_data = []
-            for row, cols in distribution.items():
-                row_stat = stats.get(row, {'mean': 0, 'median': 0, 'interpretation': 'N/A', 't_test': 0})
-                rows_data.append({
-                    'label': row,
-                    'cols': cols,
-                    'mean': row_stat['mean'],
-                    'median': row_stat['median'],
-                    'interpretation': row_stat.get('interpretation', 'N/A'),
-                    't_stat': row_stat.get('t_stat', 0)
-                })
-
-            question_data['matrix_rows'] = rows_data
-            # question_data['distribution'] = distribution # Optional, but matrix_rows covers it
-            question_data['columns'] = mx_question.columns
-            # Matrix is special; chart.js needs stacked bar
-            question_data['chart_type'] = 'stacked-bar'
-
-        
-        analytics_data.append(question_data)
+    # 3. Prepare analytics data using helper
+    # Logic note: organize_survey_sections filters SectionHeaders out of 'questions' list already
+    analytics_data = [get_question_analytics(q) for q in questions_to_analyze]
     
     context = {
         'survey': survey,
@@ -645,6 +545,7 @@ def SurveyAnalytics(request, uuid):
         'selected_section': selected_section_id,
         'current_section_label': current_section_label,
         'displayed_question_count': len(analytics_data),
+        'chart': get_correlation_table(survey, [q.id for q in questions_to_analyze]) if current_section_label != "All Sections" else None,
     }
     
     return render(request, 'SurveyAnalytics.html', context)
@@ -688,7 +589,6 @@ def GetChartData(request, uuid, question_id):
         # We might want to sort by rank (which is already sorted in the method)
         data['labels'] = list(distribution.keys())
         data['values'] = list(distribution.values())
-        data['y_label'] = 'Average Rank Position (higher is Better)'
 
     elif isinstance(question, MatrixQuestion):
         mx_question = MatrixQuestion.objects.get(pk=question.pk)
@@ -884,10 +784,8 @@ def survey_submit(request, uuid):
                 response = Response.objects.create(survey=survey, respondent=respondent)
                 
                 section_index = 1
-                for question in survey.questions.all():
-                    
+                for question in survey.questions.all():   
                     if isinstance(question, SectionHeader):
-
                         continue  # Skip SectionHeader questions
 
                     base_key = f'question_{question.position}'
@@ -896,30 +794,20 @@ def survey_submit(request, uuid):
                     if question.NAME == 'Matrix Question':
                         answer_data = {}
                         for i, row_label in enumerate(question.rows, start=1):
-                            # New unique key format matching template
-                            input_name = f'question_{question.position}_row_{i}'
-                            val = request.POST.get(input_name)
+                            old_key = f'{row_label}_row{i}'
+                            val = request.POST.get(old_key)
                             if val:
-                                answer_data[row_label] = val # Store { "Row Label": "Value" }
-                        
-                        # Fallback for legacy format support (optional, can be removed if fresh start)
-                        if not answer_data:
-                             for i, row_label in enumerate(question.rows, start=1):
-                                old_key = f'{row_label}_row{i}'
-                                val = request.POST.get(old_key)
-                                if val:
-                                    answer_data[row_label] = val
+                                answer_data[row_label] = val
+                            else:
+                                answer_data[row_label] = ""  # some default value
 
-                        # If empty dict, set to None so validation catches it
-                        if not answer_data: 
-                            answer_data = None
 
                     elif question.NAME == 'Ranking Question':
                         if values:
                             # Save as dict where key is the rank (1-based)
                             answer_data = {val: str(i) for i, val in enumerate(values[::-1], start=1)}
                         else:
-                            answer_data = None
+                            answer_data = ""
 
                     else:
                         if len(values) > 1:
@@ -927,7 +815,7 @@ def survey_submit(request, uuid):
                         elif len(values) == 1:
                             answer_data = values[0] # Single string handling
                         else:
-                            answer_data = None
+                            answer_data = ''
                     
                     # 2. Server-side Validation
                     if question.required and not answer_data:
@@ -949,7 +837,6 @@ def survey_submit(request, uuid):
         request.session[f'survey_submitted_{survey.uuid}'] = True
         return render(request, 'Thanks.html', {'survey': survey})
 
-@login_required
 def export_survey_data(request, uuid):
     """
     Export survey responses.
@@ -1037,144 +924,6 @@ def export_survey_data(request, uuid):
         return response
 
 
-# refactor
-def get_survey_data_by_sections(survey, format_type='raw', responses=None):     
-    """Helper to organize data by survey sections."""
-    sections_struct = []
-    
-    # 1. Group questions by section
-    current_section = {"title": f"{survey.title} / Start", "questions": []}
-    sections_struct.append(current_section)
-    
-    all_questions = survey.questions.all().select_related('polymorphic_ctype').order_by('position')
-    
-    for q in all_questions:
-        if isinstance(q, SectionHeader):
-            current_section = {"title": f"{survey.title} / {q.label}", "questions": []}
-            sections_struct.append(current_section)
-        else:
-            current_section["questions"].append(q)
-            
-    # Remove empty sections
-    sections_struct = [s for s in sections_struct if s["questions"]]
-    
-    # 2. Build data for each section
-    if responses is None:
-        responses = Response.objects.filter(survey=survey).prefetch_related('answers').order_by('-created_at')
-
-    results = []
-    
-    for section in sections_struct:
-        title = section['title']
-        questions = section['questions']
-        
-        # Headers
-        header = ['Respondent', 'Submitted At']
-        
-        if format_type == 'numeric':
-            for q in questions:
-                # IMPORTANT: Polymorphic 'q' required for attribute access (options, rows, etc.)
-                if q.NAME in ["Likert Question", "Multi-Choice Question"]:
-                    for option in q.options:
-                        header.append(f"{q.label} [{option}]")
-                elif q.NAME == "Matrix Question":
-                    for row in q.rows:
-                        for col in q.columns:
-                            header.append(f"{q.label} [{row} - {col}]")
-                elif q.NAME == "Ranking Question":
-                    for op in q.options:
-                        header.append(f"{q.label} [{op}]")
-                else:
-                    header.append(q.label)
-        else:
-            header.extend([q.label for q in questions])
-
-        section_rows = []
-        for resp in responses:
-            base_info = [
-                resp.respondent.username if resp.respondent else 'Anonymous',
-                resp.created_at.strftime('%Y-%m-%d %H:%M:%S'),
-            ]
-            
-            answers_map = {ans.question_id: ans for ans in resp.answers.all()}
-            
-            row_cells = []
-            for q in questions:
-                ans = answers_map.get(q.id)
-                val = ans.answer_data if ans else None
-
-                if format_type == 'numeric':
-                    row_data = q.get_numeric_answer(val)
-                    if isinstance(row_data, list):
-                        row_cells.extend(row_data)
-                    else:
-                        row_cells.append(row_data)     
-                else:
-                    if isinstance(val, list):
-                         row_cells.append(" | ".join([str(v) for v in val]))
-                    elif isinstance(val, dict):
-                         # Format dicts nicely (e.g. for Matrix or Ranking)
-                         formatted_items = []
-                         for k, v in val.items():
-                             formatted_items.append(f"{k}: '{v}'")
-                         row_cells.append(" | ".join(formatted_items))
-                    else:
-                        row_cells.append(val)
-
-            section_rows.append(base_info + row_cells)
-
-        results.append({
-            'title': title,
-            'header': header,
-            'rows': section_rows
-        })
-        
-    return results
-
-def get_survey_export_data(survey, format_type='raw', responses=None):
-    """Helper to generate rows for survey data export/view."""
-
-    header, data_questions = get_header_table(survey, format_type)
-      
-
-    # Optimized Data Fetching: Prefetch answers to avoid N+1 queries
-    if responses is None:
-        responses = Response.objects.filter(survey=survey).prefetch_related('answers').order_by('-created_at')
-    
-    rows = []
-    for resp in responses:
-        row = [
-            resp.respondent.username if resp.respondent else 'Anonymous',
-            resp.created_at.strftime('%Y-%m-%d %H:%M:%S')
-        ]
-        
-        answers_map = {ans.question_id: ans for ans in resp.answers.all()}
-        
-        for q in data_questions:
-            ans = answers_map.get(q.id)
-            val = ans.answer_data if ans else None
-
-            if format_type == 'numeric':
-                row_data = q.get_numeric_answer(val)
-                if isinstance(row_data, list):
-                    row.extend(row_data)
-                else:
-                    row.append(row_data)     
-            else:
-                if isinstance(val, list):
-                     row.append(" | ".join([str(v) for v in val]))
-                elif isinstance(val, dict):
-                     # Format dicts nicely (e.g. for Matrix or Ranking)
-                     formatted_items = []
-                     for k, v in val.items():
-                         formatted_items.append(f"{k}: {v}")
-                     row.append(" | ".join(formatted_items))
-                else:
-                    row.append(val)
-        rows.append(row)        
-        
-    return header, rows, data_questions
-
 @login_required
 def SurveyDataGrid(request, uuid):
     """Display survey data in a table format."""
@@ -1220,3 +969,15 @@ def SurveyDataGrid(request, uuid):
         return render(request, 'partials/SurveyDataGrid/grid_view.html', context)
         
     return render(request, 'SurveyDataGrid.html', context)
+
+@login_required
+def correlation_table(request, uuid):
+    survey = get_object_or_404(Survey, uuid=uuid, created_by=request.user)
+    questions_id = request.GET.getlist('correlation_question', None)
+
+    if not questions_id:
+        return render(request, 'partials/SurveyAnalytics/correlation_table.html', {'chart': None, 'survey': survey})
+
+
+    string = get_correlation_table(survey, questions_id)
+    return render(request, 'partials/SurveyAnalytics/correlation_table.html', {'chart': string, 'survey': survey})
