@@ -442,33 +442,78 @@ def Responses(request, page_number=1):
 def SurveyResponseDetail(request, uuid):
     """Detailed view of responses for a specific survey"""
     survey = get_object_or_404(Survey, uuid=uuid, created_by=request.user)
-    responses = Response.objects.filter(survey=survey).order_by('-created_at')
     
-    # Pagination for responses
+    # Determine View Mode: 'individual' (default) vs 'overview'
+    view_mode = request.GET.get('view', 'individual') 
     page_number = request.GET.get('page', 1)
-    paginator = Paginator(responses, 20)
-    page = paginator.get_page(page_number)
-    
-    # Get statistics
-    total_responses = responses.count()
     
     context = {
         'survey': survey,
-        'responses': page,
-        'total_responses': total_responses,
-        'page': page,
+        'view_mode': view_mode,
+        'active_tab': view_mode, # For template compatibility
     }
+    
+    if view_mode == 'overview':
+        # --- Overview Logic ---
+        questions = survey.questions.instance_of(Question).not_instance_of(SectionHeader).order_by('position')
+        responses_list = Response.objects.filter(survey=survey).prefetch_related('answers').order_by('-created_at')
+        
+        paginator = Paginator(responses_list, 20)
+        page_obj = paginator.get_page(page_number)
+        
+        table_data = []
+        for response in page_obj:
+            row = {'response': response, 'cells': []}
+            response_answers = {a.question_id: a for a in response.answers.all()}
+            for question in questions:
+                answer = response_answers.get(question.id)
+                val = answer.answer_data if answer else None
+                # Check for empty/None values
+                if val is not None and val != "":
+                     row['cells'].append(val)
+                else:
+                     row['cells'].append("N/A")
+            table_data.append(row)
+            
+        context.update({
+            'questions': questions,
+            'table_data': table_data,
+            'page_obj': page_obj,
+            'total_responses': responses_list.count(), # For stats if needed
+        })
+        
+    else:
+        # --- Individual Responses Logic ---
+        responses = Response.objects.filter(survey=survey).order_by('-created_at')
+        total_responses = responses.count()
+        
+        paginator = Paginator(responses, 20)
+        page = paginator.get_page(page_number)
+        
+        context.update({
+            'responses': page,
+            'page': page,
+            'total_responses': total_responses,
+        })
     
     is_htmx = request.headers.get('HX-Request') == 'true'
     hx_target = request.headers.get('HX-Target')
     
     if is_htmx:
+        # Tab Switching matches the whole container
         if hx_target == 'response-tabs-container':
-            context['active_tab'] = 'individual'
             return render(request, 'partials/SurveyResponseDetail/response_tabs.html', context)
-            
-        # عند طلب htmx، نرسل فقط الجزء الذي يحتاج إلى التحديث (الجدول وشريط التنقل)
-        return render(request, 'partials/SurveyResponseDetail/survey_responses_table_and_pagination.html', context)
+        
+        # NOTE: With the consolidation of templates into response_tabs.html, we likely don't need
+        # granular swaps anymore unless specific parts are targeted. 
+        # But if the user's template (which I just wrote) targets #response-tabs-container for pagination too,
+        # then the above block covers it.
+        # If there are legacy HTMX calls targeting other IDs, we might fallback to response_tabs.html 
+        # or handle them accordingly.
+        # Since I updated response_tabs.html to target #response-tabs-container for EVERYTHING,
+        # we can just return response_tabs.html for any HTMX request related to this view.
+        
+        return render(request, 'partials/SurveyResponseDetail/response_tabs.html', context)
     
     return render(request, 'SurveyResponseDetail.html', context)
 
@@ -623,52 +668,7 @@ def GetChartData(request, uuid, question_id):
     
     return JsonResponse(data)
 
-@login_required
-def SurveyResponsesOverviewTable(request, uuid):
-    """
-    Returns the HTML for the responses overview table.
-    """
-    survey = get_object_or_404(Survey, uuid=uuid, created_by=request.user)
-    # Exclude SectionHeader from the questions list
-    questions = survey.questions.instance_of(Question).not_instance_of(SectionHeader).order_by('position')
-    
-    responses_list = Response.objects.filter(survey=survey).prefetch_related('answers').order_by('-created_at')
-    
-    # Pagination
-    paginator = Paginator(responses_list, 20)  # Show 20 responses per page
-    page_number = request.GET.get('page')
-    page_obj = paginator.get_page(page_number)
-    
-    # Prepare data for the table
-    table_data = []
-    for response in page_obj:
-        row = {'response': response, 'cells': []}
-        # Map question_id to answer object for quick lookup
-        response_answers = {a.question_id: a for a in response.answers.all()}
-        
-        for question in questions:
-            answer = response_answers.get(question.id)
-            if answer:
-                # Check for empty string as well as None
-                val = answer.answer_data
-                row['cells'].append(val if val is not None and val != "" else "N/A")
-            else:
-                row['cells'].append("N/A")
-        table_data.append(row)
-        
-    context = {
-        'survey': survey,
-        'questions': questions,
-        'table_data': table_data,
-        'page_obj': page_obj,
-    }
-    
-    # Check if this is a tab switch request
-    if request.headers.get('X-Tab-Switch') == 'true':
-        context['active_tab'] = 'overview'
-        return render(request, 'partials/SurveyResponseDetail/response_tabs.html', context)
-        
-    return render(request, 'partials/SurveyResponseDetail/responses_overview_table.html', context)
+
 
 @require_POST
 @login_required
