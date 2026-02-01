@@ -350,6 +350,14 @@ msgstr "لم يتم تقديم وصف."
 msgid "Copy survey link"
 msgstr "نسخ رابط الاستبيان"
 
+#: .\survey\templates\partials\Dashboard\tableRow.html:45
+msgid "Copy Link"
+msgstr "نسخ الرابط"
+
+#: .\survey\templates\partials\Dashboard\tableRow.html:47
+msgid "Copied!"
+msgstr "تم النسخ!"
+
 #: .\survey\templates\partials\Dashboard\tableRow.html:37
 msgid "Show Responses"
 msgstr "عرض الردود"

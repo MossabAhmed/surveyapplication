@@ -196,14 +196,14 @@ def get_survey_data_by_sections(survey, format_type='raw', responses=None):
         if format_type == 'numeric':
             for q in questions:
                 # IMPORTANT: Polymorphic 'q' required for attribute access (options, rows, etc.)
-                if q.NAME in ["Likert Question", "Multi-Choice Question"]:
+                if isinstance(q, (LikertQuestion, MultiChoiceQuestion)):
                     for option in q.options:
                         header.append(f"{q.label} [{option}]")
-                elif q.NAME == "Matrix Question":
+                elif isinstance(q, MatrixQuestion):
                     for row in q.rows:
                         for col in q.columns:
                             header.append(f"{q.label} [{row} - {col}]")
-                elif q.NAME == "Ranking Question":
+                elif isinstance(q, RankQuestion):
                     for op in q.options:
                         header.append(f"{q.label} [{op}]")
                 else:

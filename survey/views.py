@@ -480,32 +480,43 @@ def GetResponseDetail(request, response_id):
     """Returns the detail of a single response for modal display"""
     response_obj = get_object_or_404(Response, id=response_id, survey__created_by=request.user)
     
-    # 1. Get all questions for this survey to build the position map (excluding sections)
+    # 1. Get all questions for this survey to build the structure
     survey = response_obj.survey
     all_questions = survey.questions.all().order_by('position')
-    
-    # map question_id -> visual_index (1, 2, 3...)
-    question_position_map = {}
-    current_index = 1
-    for q in all_questions:
-        if not isinstance(q, SectionHeader):
-            question_position_map[q.id] = current_index
-            current_index += 1
             
-    # 2. Get answers and annotate them with the visual index
-    answers = response_obj.answers.select_related('question').order_by('question__position')
+    # 2. Get answers and map them
+    answers_qs = response_obj.answers.all()
+    answers_map = {answer.question_id: answer for answer in answers_qs}
     
-    # We turn the queryset into a list to attach dynamic attributes 
-    # (or we could just use a dictionary lookup in the template if we had a filter, 
-    # but processing here is safer)
-    annotated_answers = []
-    for answer in answers:
-        answer.real_position = question_position_map.get(answer.question_id, answer.question.position)
-        annotated_answers.append(answer)
+    display_items = []
+    current_index = 1
+    
+    for q in all_questions:
+        if isinstance(q, SectionHeader):
+             display_items.append({
+                'is_section': True,
+                'question': q,
+            })
+        else:
+            answer = answers_map.get(q.id)
+            if answer:
+                # Use the polymorphic question object
+                answer.question = q
+                answer.real_position = current_index
+                display_items.append(answer)
+            else:
+                # Missing answer: create a temporary object for display
+                # We can use the Answer model class but not save it
+                dummy_answer = Answer(question=q, answer_data=None)
+                dummy_answer.question = q
+                dummy_answer.real_position = current_index
+                display_items.append(dummy_answer)
+                
+            current_index += 1
 
     return render(request, 'partials/SurveyResponseDetail/response_detail_modal_content.html', {
         'response': response_obj,
-        'answers': annotated_answers
+        'answers': display_items
     })
 
 @login_required
@@ -641,8 +652,11 @@ def SurveyResponsesOverviewTable(request, uuid):
         for question in questions:
             answer = response_answers.get(question.id)
             if answer:
-                # Use the new method we added to the models
-                row['cells'].append(answer.answer_data if answer.answer_data is not None else "N/A")
+                # Check for empty string as well as None
+                val = answer.answer_data
+                row['cells'].append(val if val is not None and val != "" else "N/A")
+            else:
+                row['cells'].append("N/A")
         table_data.append(row)
         
     context = {
@@ -791,7 +805,7 @@ def survey_submit(request, uuid):
                     base_key = f'question_{question.position}'
                     values = request.POST.getlist(base_key)
                     
-                    if question.NAME == 'Matrix Question':
+                    if isinstance(question, MatrixQuestion):
                         answer_data = {}
                         for i, row_label in enumerate(question.rows, start=1):
                             old_key = f'{row_label}_row{i}'
@@ -802,7 +816,7 @@ def survey_submit(request, uuid):
                                 answer_data[row_label] = ""  # some default value
 
 
-                    elif question.NAME == 'Ranking Question':
+                    elif isinstance(question, RankQuestion):
                         if values:
                             # Save as dict where key is the rank (1-based)
                             answer_data = {val: str(i) for i, val in enumerate(values[::-1], start=1)}

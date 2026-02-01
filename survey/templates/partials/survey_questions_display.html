@@ -71,7 +71,7 @@
 
             <!-- 1. MULTI-CHOICE -->
             {% if q.NAME == multi_choice_question %}
-            <div class="flex flex-col gap-3" 
+            <div class="flex flex-col gap-3"
                 {% if q.allow_multiple and q.required or q.allow_multiple and q.the_minimum_number_of_options_to_be_selected > 1 %} data-required-checkbox-group{% endif %}
                 {% if q.allow_multiple %}data-min-required="{{ q.the_minimum_number_of_options_to_be_selected }}"{% endif %}>
                 {% for option in q.options|shuffle_if:q.randomize_options %}
@@ -214,11 +214,11 @@
                               :class="{'border-primary/50 bg-primary/5': ranked.length > 0, 'flex items-center justify-center': ranked.length === 0}"
                               x-auto-animate>
                             
-                            <template x-show="ranked.length === 0">
+                            <div x-show="ranked.length === 0">
                                 <div class="text-slate-400 text-sm text-center italic">
                                     {% trans "Tap options below to add them here in order" %}
                                 </div>
-                            </template>
+                            </div>
 
                             <template x-for="(option, index) in ranked" :key="option">
                                 <div class="flex items-center gap-3 p-3 bg-white border border-slate-200 rounded-lg shadow-sm group mb-2 last:mb-0">

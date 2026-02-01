@@ -39,6 +39,16 @@
                 <li>
                     <a href="{% url 'SurveyPreview' survey.uuid %}" target="_blank" rel="noopener noreferrer">{% trans "Preview" %}</a>
                 </li>
+                {% if survey.state == 'published' %}
+                <li x-data="{ copied: false, text: '/survey/{{survey.uuid}}' }">
+                    <button @click="navigator.clipboard.writeText(window.location.origin + text); copied = true; setTimeout(() => copied = false, 2000)" class="text-left w-full">
+                        <span x-show="!copied">{% trans "Copy Link" %}</span>
+                        <span x-show="copied" class="text-green-600 font-bold flex items-center gap-2">
+                            <i class="fa-solid fa-check"></i> {% trans "Copied!" %}
+                        </span>
+                    </button>
+                </li>
+                {% endif %}
                 <li id="edit-survey-link-{{ survey.uuid }}">
                     <a href="{% url 'EditSurvey' survey.uuid %}" {% if survey.state == 'published' %}class="text-gray-400 pointer-events-none"{% endif %}>{% trans "Edit" %}</a>
                 </li>

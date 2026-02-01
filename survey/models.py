@@ -367,8 +367,11 @@ class MatrixQuestion(Question):
         row = []
         for i, row_label in enumerate(self.rows, start=1):
             for col in self.columns:
-                key = f'{row_label}_row{i}'
-                selected_col = val.get(key) if isinstance(val, dict) else '0'
+                # Support both legacy keys ("<row>_row<i>") and the newer plain row key
+                key_legacy = f'{row_label}_row{i}'
+                selected_col = '0'
+                if isinstance(val, dict):
+                    selected_col = val.get(row_label) or val.get(key_legacy) or '0'
                 row.append("1" if (selected_col == col) else "0")
         return row       
 class TextQuestion(Question):
