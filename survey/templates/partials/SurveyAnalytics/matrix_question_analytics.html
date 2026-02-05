@@ -16,6 +16,7 @@
             </div>
         </div>
 
+        {% if data.total_question_answers > 0 %}
         <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
             <div class="text-center p-3 bg-blue-50/50 rounded-xl border border-blue-100">
                 <div class="text-[14px] text-blue-500 uppercase font-bold tracking-wider mb-1">{% trans "Responses" %}</div>
@@ -27,6 +28,7 @@
                 <div class="text-2xl font-bold text-purple-600">{% widthratio data.total_question_answers total_responses 100 %} %</div>
             </div>
         </div>
+        {% endif %}
         
         <!-- Matrix Analytics Layout -->
         <div class="flex flex-col gap-8">
