@@ -28,7 +28,6 @@ urlpatterns = [
     path('responses/<int:page_number>', views.Responses, name='Responses_Page'),
     path('responses/survey/<uuid:uuid>', views.SurveyResponseDetail, name='SurveyResponseDetail'),
     path('responses/detail/<int:response_id>', views.GetResponseDetail, name='GetResponseDetail'),
-    path('responses/survey/<uuid:uuid>/overview', views.SurveyResponsesOverviewTable, name='SurveyResponsesOverviewTable'),
     path('responses/survey/<uuid:uuid>/analytics', views.SurveyAnalytics, name='SurveyAnalytics'),
     path('responses/survey/<uuid:uuid>/data-grid', views.SurveyDataGrid, name='SurveyDataGrid'),
     path('responses/survey/<uuid:uuid>/export', views.export_survey_data, name='export_survey_data'),

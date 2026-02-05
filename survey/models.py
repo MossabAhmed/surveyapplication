@@ -27,6 +27,7 @@ class Survey(models.Model):
     state = models.CharField(max_length=20, choices=STATE_CHOICES, default="draft", verbose_name=_("State"))
     created_by =  models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='surveys', verbose_name=_("Created By"))
     question_count = models.IntegerField(default=0, verbose_name=_("Question Count"))
+    view_count = models.IntegerField(default=0, verbose_name=_("View Count"))
     shuffle_questions = models.BooleanField(default=False, verbose_name=_("Shuffle Questions"))
     anonymous_responses = models.BooleanField(default=False, verbose_name=_("Anonymous Responses"))
 
@@ -43,6 +44,10 @@ class Survey(models.Model):
         elif self.state == 'archived':
             return 'bg-red-200 text-black'
         return 'bg-gray-100 text-black'
+
+    @property
+    def real_question_count(self):
+        return self.questions.exclude(polymorphic_ctype__model='sectionheader').count()
     
     @property
     def response_count(self):
@@ -57,15 +62,15 @@ class Survey(models.Model):
         }
     
     def get_completion_rate(self):
-        """Calculate completion rate (placeholder)"""
-        return 100 if self.response_count > 0 else 0
+        """Calculate completion rate: (Responses / Views) * 100"""
+        if self.view_count > 0:
+            return round((self.response_count / self.view_count) * 100, 2)
+        return 0
     
     def get_avg_response_time(self):
         """Calculate average response time (placeholder)"""
         return "N/A"
     
-
-
 class Question(PolymorphicModel):
     survey = models.ForeignKey(Survey, on_delete=models.CASCADE, related_name='questions', verbose_name=_("Survey"))
     label = models.TextField(verbose_name=_("Label"))
@@ -87,7 +92,6 @@ class Question(PolymorphicModel):
                 names.append(subclass.NAME)
         return names
 
-
 class MultiChoiceQuestion(Question):
     options = models.JSONField(default=list, verbose_name=_("Options"))
     allow_multiple = models.BooleanField(default=True, verbose_name=_("Allow Multiple"))
@@ -101,15 +105,22 @@ class MultiChoiceQuestion(Question):
     def get_answer_distribution(self):
         """Get distribution of answers for this question"""
         answers = Answer.objects.filter(question=self)
-        distribution = {}
+        
+        # Initialize with 0 for all existing options
+        distribution = {option: 0 for option in self.options}
         
         for answer in answers:
             answer_data = answer.answer_data
+            if not answer_data: # Skip None or empty string
+                continue
+                
             if isinstance(answer_data, list):
                 for item in answer_data:
-                    distribution[item] = distribution.get(item, 0) + 1
+                    if item in distribution:
+                        distribution[item] += 1
             else:
-                distribution[answer_data] = distribution.get(answer_data, 0) + 1
+                if answer_data in distribution:
+                    distribution[answer_data] += 1
         
         return distribution
 
@@ -120,10 +131,8 @@ class MultiChoiceQuestion(Question):
         else: 
             return ['1' if val == option else '0' for option in self.options]
 
-
 class LikertQuestion(Question):
     options = models.JSONField(default=list, verbose_name=_("Options"))
-    scale_max = models.IntegerField(default=5, verbose_name=_("Scale Max"))
     NAME = _("Likert Question")
 
     def get_all_scores(self):
@@ -355,10 +364,14 @@ class MatrixQuestion(Question):
         row = []
         for i, row_label in enumerate(self.rows, start=1):
             for col in self.columns:
-                key = f'{row_label}_row{i}'
-                selected_col = val.get(key) if isinstance(val, dict) else '0'
+                # Support both legacy keys ("<row>_row<i>") and the newer plain row key
+                key_legacy = f'{row_label}_row{i}'
+                selected_col = '0'
+                if isinstance(val, dict):
+                    selected_col = val.get(row_label) or val.get(key_legacy) or '0'
                 row.append("1" if (selected_col == col) else "0")
         return row       
+
 class TextQuestion(Question):
     is_long_answer = models.BooleanField(default=False, verbose_name=_("Is Long Answer"))
     min_length = models.IntegerField(null=True, blank=True, verbose_name=_("Minimum Length"))
@@ -370,7 +383,6 @@ class TextQuestion(Question):
         # 1 if answered, 0 if not (simple completion metric)
         return answer_data if answer_data else "N/A"
 
-
 class SectionHeader(Question):
     """A page title / separator used to split a survey into sections."""
 
@@ -380,7 +392,6 @@ class SectionHeader(Question):
         # Section headers do not collect answers.
         return ""
 
-    
 class RatingQuestion(Question):
     range_min = models.IntegerField(default=1, verbose_name=_("Range Min"))
     range_max = models.IntegerField(default=5, verbose_name=_("Range Max"))
@@ -553,19 +564,23 @@ class RankQuestion(Question):
     def get_average_ranks(self):
         """
         Returns a dict of {option_name: average_rank_position}.
-        Lower number = Better rank (1st place, 2nd place, etc.)
+        weighted score = (number of options - rank) + 1
+        Higher number = Better rank
         """
         answers = Answer.objects.filter(question=self)
         stats = {opt: {'sum': 0, 'count': 0} for opt in self.options}
+        num_options = len(self.options)
         
         for answer in answers:
-            # answer_data is expected to be a dict {'5': 'Option A', '4': 'Option B'}
+            # answer_data is expected to be a dict {'Option A': '1', 'Option B': '2'}
             ranking_dict = answer.answer_data 
             if isinstance(ranking_dict, dict):
                 for item, score in ranking_dict.items():
                         try:
-                            stats[item]['sum'] += int(score)
-                            stats[item]['count'] += 1
+                            if item in stats:
+                                weight = int(score)
+                                stats[item]['sum'] += weight
+                                stats[item]['count'] += 1
                         except (ValueError, TypeError):
                             pass
         
@@ -576,8 +591,8 @@ class RankQuestion(Question):
             else:
                 results[opt] = 0
         
-        # Sort by rank (lowest score is best)
-        return dict(sorted(results.items(), key=lambda item: item[1]))
+        # Sort by weight (highest score is best)
+        return dict(sorted(results.items(), key=lambda item: item[1], reverse=True))
 
 class Response(models.Model):
     survey = models.ForeignKey(Survey, on_delete=models.CASCADE, related_name='responses')
@@ -591,12 +606,10 @@ class Response(models.Model):
     def __str__(self):
         return f"Response to {self.survey.title} at {self.created_at}"
 
-
 class Answer(models.Model):
     response = models.ForeignKey(Response, on_delete=models.CASCADE, related_name='answers')
     question = models.ForeignKey(Question, on_delete=models.CASCADE, related_name='answers')
     answer_data = models.JSONField(null=True, blank=True)
-    section = models.IntegerField()
     
     def __str__(self):
         return f"Answer for {self.question.label[:30]}: {self.answer_data}"

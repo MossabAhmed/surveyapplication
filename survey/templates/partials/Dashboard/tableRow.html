@@ -3,11 +3,15 @@
     context = {'survey': survey}
 {% endcomment %}
 <tr class="bg-white hover:bg-gray-50 border-b border-gray-100" id="survey-row-{{ survey.uuid }}">
-    <td class="px-8 py-4 font-medium text-gray-900">
-        {{ survey.title }}
+    <td class="px-8 py-4 rtl:text-right font-medium text-gray-900 max-w-[200px]">
+        <div class="truncate" title="{{ survey.title }}">
+             {{ survey.title }}
+        </div>
     </td>
-    <td class="px-8 py-4 text-gray-600 line-clamp-2">
-        {{ survey.description }}
+    <td class="px-8 py-4 rtl:text-right text-gray-600 max-w-[300px]">
+        <div class="line-clamp-2 text-ellipsis overflow-hidden" title="{{ survey.description }}">
+            {{ survey.description }}
+        </div>
     </td>
     <td class="px-8 py-4 text-center">
         <span id="survey-table-status-{{ survey.uuid }}" class="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider {{ survey.status_badge_class }} ">{{ survey.get_state_display }}</span>
@@ -39,6 +43,16 @@
                 <li>
                     <a href="{% url 'SurveyPreview' survey.uuid %}" target="_blank" rel="noopener noreferrer">{% trans "Preview" %}</a>
                 </li>
+                {% if survey.state == 'published' %}
+                <li x-data="{ copied: false, text: '/survey/{{survey.uuid}}' }">
+                    <button @click="navigator.clipboard.writeText(window.location.origin + text); copied = true; setTimeout(() => copied = false, 2000)" class="text-left w-full">
+                        <span x-show="!copied">{% trans "Copy Link" %}</span>
+                        <span x-show="copied" class="text-green-600 font-bold flex items-center gap-2">
+                            <i class="fa-solid fa-check"></i> {% trans "Copied!" %}
+                        </span>
+                    </button>
+                </li>
+                {% endif %}
                 <li id="edit-survey-link-{{ survey.uuid }}">
                     <a href="{% url 'EditSurvey' survey.uuid %}" {% if survey.state == 'published' %}class="text-gray-400 pointer-events-none"{% endif %}>{% trans "Edit" %}</a>
                 </li>

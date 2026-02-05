@@ -17,6 +17,8 @@ from django.views import View
 from django.views.generic import CreateView, UpdateView, DeleteView, DetailView
 from django.shortcuts import redirect
 from django.urls import reverse
+from django.contrib import messages
+from django.utils.translation import gettext as _
 from .utility import normalize_formset_indexes, get_dashboard_surveys, get_survey_export_data,organize_survey_sections, get_question_analytics, get_correlation_table, get_survey_data_by_sections
 from django.urls import reverse_lazy
 from django.contrib.auth.decorators import login_required
@@ -62,11 +64,13 @@ def create_survey(request):
                 survey = form.save(commit=False)
                 survey.state = 'draft' # Previewing now saves as draft
                 survey.created_by = request.user
-                survey.question_count = question_formset.total_form_count()
                 survey.save()
                 
                 question_formset.instance = survey
                 question_formset.save()
+
+                survey.question_count = survey.real_question_count
+                survey.save(update_fields=['question_count'])
 
             # Redirect to the dedicated preview view, passing the Edit URL as the "back" link
             preview_url = reverse('SurveyPreview', args=[survey.uuid])
@@ -78,11 +82,13 @@ def create_survey(request):
             action = request.POST.get('action')
             survey.state = 'published' if action == 'publish' else 'draft'
             survey.created_by = request.user
-            survey.question_count = question_formset.total_form_count()
             survey.save()
 
             question_formset.instance = survey
             question_formset.save()
+
+            survey.question_count = survey.real_question_count
+            survey.save(update_fields=['question_count'])
 
         return redirect('/Dashboard')
 
@@ -117,11 +123,13 @@ def edit_survey(request, uuid):
         if request.POST.get('action') == 'preview':
             with transaction.atomic():
                 updated_survey = form.save(commit=False)
-                updated_survey.question_count = question_formset.total_form_count()
                 updated_survey.save()
 
                 question_formset.instance = updated_survey
                 question_formset.save()
+
+                updated_survey.question_count = updated_survey.real_question_count
+                updated_survey.save(update_fields=['question_count'])
 
             # Redirect to the dedicated preview view, passing the Edit URL as the "back" link
             preview_url = reverse('SurveyPreview', args=[updated_survey.uuid])
@@ -132,11 +140,13 @@ def edit_survey(request, uuid):
             updated_survey = form.save(commit=False)
             action = request.POST.get('action')
             updated_survey.state = 'published' if action == 'publish' else 'draft'
-            updated_survey.question_count = question_formset.total_form_count()
             updated_survey.save()
 
             question_formset.instance = updated_survey
             question_formset.save()
+
+            updated_survey.question_count = updated_survey.real_question_count
+            updated_survey.save(update_fields=['question_count'])
 
         return redirect('/Dashboard')
 
@@ -227,15 +237,32 @@ def delete_survey_confirm(request, uuid):
     """
     Renders a confirmation modal for survey deletion.
     """
-    survey = get_object_or_404(Survey, uuid=uuid)
+    survey = get_object_or_404(Survey, uuid=uuid, created_by=request.user)
     context = {'survey': survey}
     return render(request, 'partials/Dashboard/delete_modal.html', context)
 
+@require_POST
 @login_required
 def DeleteSurvey(request, uuid):
-    item = get_object_or_404(Survey, uuid=uuid)
-    item.delete()
-    return redirect('/Dashboard')
+    survey = get_object_or_404(Survey, uuid=uuid, created_by=request.user)
+    try:
+        title = survey.title
+        with transaction.atomic():
+            # Manual cascade deletion to avoid SQLite Foreign Key constraints issues
+            Answer.objects.filter(response__survey=survey).delete()
+            survey.responses.all().delete()
+            
+            # Use iteration for polymorphic models to ensure correct deletion order
+            for question in survey.questions.all():
+                question.delete()
+            
+            survey.delete()
+            
+        messages.success(request, _('Survey "%s" was successfully deleted.') % title)
+    except Exception as e:
+        messages.error(request, _('An error occurred while deleting the survey: %s') % str(e))
+    
+    return redirect('Dashboard')
 
 @login_required
 def Index(request, page_number=1):
@@ -434,28 +461,78 @@ def Responses(request, page_number=1):
 def SurveyResponseDetail(request, uuid):
     """Detailed view of responses for a specific survey"""
     survey = get_object_or_404(Survey, uuid=uuid, created_by=request.user)
-    responses = Response.objects.filter(survey=survey).order_by('-created_at')
     
-    # Pagination for responses
+    # Determine View Mode: 'individual' (default) vs 'overview'
+    view_mode = request.GET.get('view', 'individual') 
     page_number = request.GET.get('page', 1)
-    paginator = Paginator(responses, 20)
-    page = paginator.get_page(page_number)
-    
-    # Get statistics
-    total_responses = responses.count()
     
     context = {
         'survey': survey,
-        'responses': page,
-        'total_responses': total_responses,
-        'page': page,
+        'view_mode': view_mode,
+        'active_tab': view_mode, # For template compatibility
     }
     
+    if view_mode == 'overview':
+        # --- Overview Logic ---
+        questions = survey.questions.instance_of(Question).not_instance_of(SectionHeader).order_by('position')
+        responses_list = Response.objects.filter(survey=survey).prefetch_related('answers').order_by('-created_at')
+        
+        paginator = Paginator(responses_list, 20)
+        page_obj = paginator.get_page(page_number)
+        
+        table_data = []
+        for response in page_obj:
+            row = {'response': response, 'cells': []}
+            response_answers = {a.question_id: a for a in response.answers.all()}
+            for question in questions:
+                answer = response_answers.get(question.id)
+                val = answer.answer_data if answer else None
+                # Check for empty/None values
+                if val is not None and val != "":
+                     row['cells'].append(val)
+                else:
+                     row['cells'].append("N/A")
+            table_data.append(row)
+            
+        context.update({
+            'questions': questions,
+            'table_data': table_data,
+            'page_obj': page_obj,
+            'total_responses': responses_list.count(), # For stats if needed
+        })
+        
+    else:
+        # --- Individual Responses Logic ---
+        responses = Response.objects.filter(survey=survey).order_by('-created_at')
+        total_responses = responses.count()
+        
+        paginator = Paginator(responses, 20)
+        page = paginator.get_page(page_number)
+        
+        context.update({
+            'responses': page,
+            'page': page,
+            'total_responses': total_responses,
+        })
+    
     is_htmx = request.headers.get('HX-Request') == 'true'
+    hx_target = request.headers.get('HX-Target')
     
     if is_htmx:
-        # عند طلب htmx، نرسل فقط الجزء الذي يحتاج إلى التحديث (الجدول وشريط التنقل)
-        return render(request, 'partials/SurveyResponseDetail/survey_responses_table_and_pagination.html', context)
+        # Tab Switching matches the whole container
+        if hx_target == 'response-tabs-container':
+            return render(request, 'partials/SurveyResponseDetail/response_tabs.html', context)
+        
+        # NOTE: With the consolidation of templates into response_tabs.html, we likely don't need
+        # granular swaps anymore unless specific parts are targeted. 
+        # But if the user's template (which I just wrote) targets #response-tabs-container for pagination too,
+        # then the above block covers it.
+        # If there are legacy HTMX calls targeting other IDs, we might fallback to response_tabs.html 
+        # or handle them accordingly.
+        # Since I updated response_tabs.html to target #response-tabs-container for EVERYTHING,
+        # we can just return response_tabs.html for any HTMX request related to this view.
+        
+        return render(request, 'partials/SurveyResponseDetail/response_tabs.html', context)
     
     return render(request, 'SurveyResponseDetail.html', context)
 
@@ -463,7 +540,45 @@ def SurveyResponseDetail(request, uuid):
 def GetResponseDetail(request, response_id):
     """Returns the detail of a single response for modal display"""
     response_obj = get_object_or_404(Response, id=response_id, survey__created_by=request.user)
-    return render(request, 'partials/SurveyResponseDetail/response_detail_modal_content.html', {'response': response_obj})
+    
+    # 1. Get all questions for this survey to build the structure
+    survey = response_obj.survey
+    all_questions = survey.questions.all().order_by('position')
+            
+    # 2. Get answers and map them
+    answers_qs = response_obj.answers.all()
+    answers_map = {answer.question_id: answer for answer in answers_qs}
+    
+    display_items = []
+    current_index = 1
+    
+    for q in all_questions:
+        if isinstance(q, SectionHeader):
+             display_items.append({
+                'is_section': True,
+                'question': q,
+            })
+        else:
+            answer = answers_map.get(q.id)
+            if answer:
+                # Use the polymorphic question object
+                answer.question = q
+                answer.real_position = current_index
+                display_items.append(answer)
+            else:
+                # Missing answer: create a temporary object for display
+                # We can use the Answer model class but not save it
+                dummy_answer = Answer(question=q, answer_data=None)
+                dummy_answer.question = q
+                dummy_answer.real_position = current_index
+                display_items.append(dummy_answer)
+                
+            current_index += 1
+
+    return render(request, 'partials/SurveyResponseDetail/response_detail_modal_content.html', {
+        'response': response_obj,
+        'answers': display_items
+    })
 
 @login_required
 def SurveyAnalytics(request, uuid):
@@ -572,43 +687,7 @@ def GetChartData(request, uuid, question_id):
     
     return JsonResponse(data)
 
-@login_required
-def SurveyResponsesOverviewTable(request, uuid):
-    """
-    Returns the HTML for the responses overview table.
-    """
-    survey = get_object_or_404(Survey, uuid=uuid, created_by=request.user)
-    # Exclude SectionHeader from the questions list
-    questions = survey.questions.instance_of(Question).not_instance_of(SectionHeader).order_by('position')
-    
-    responses_list = Response.objects.filter(survey=survey).prefetch_related('answers').order_by('-created_at')
-    
-    # Pagination
-    paginator = Paginator(responses_list, 20)  # Show 20 responses per page
-    page_number = request.GET.get('page')
-    page_obj = paginator.get_page(page_number)
-    
-    # Prepare data for the table
-    table_data = []
-    for response in page_obj:
-        row = {'response': response, 'cells': []}
-        # Map question_id to answer object for quick lookup
-        response_answers = {a.question_id: a for a in response.answers.all()}
-        
-        for question in questions:
-            answer = response_answers.get(question.id)
-            if answer:
-                # Use the new method we added to the models
-                row['cells'].append(answer.answer_data if answer.answer_data is not None else "N/A")
-        table_data.append(row)
-        
-    context = {
-        'survey': survey,
-        'questions': questions,
-        'table_data': table_data,
-        'page_obj': page_obj,
-    }
-    return render(request, 'partials/SurveyResponseDetail/responses_overview_table.html', context)
+
 
 @require_POST
 @login_required
@@ -649,12 +728,15 @@ def ToggleSurveyStatusConfirm(request, uuid):
 def survey_Start_View(request, uuid):
     """View to start taking the survey."""
     survey = get_object_or_404(Survey, uuid=uuid, state='published')
-
     if not survey.anonymous_responses and not request.user.is_authenticated:
         login_url = reverse('respondent_login')
         next_url = request.path
         return redirect(f"{login_url}?next={next_url}")
-
+        
+    # Increment view count
+    survey.view_count += 1
+    survey.save()
+    
     questions = survey.questions.all().order_by('position')
     
     context = {
@@ -715,13 +797,13 @@ def CopySurveyView(request, uuid):
 def survey_submit(request, uuid):
     """Submit the survey responses."""
     survey = get_object_or_404(Survey, uuid=uuid)
+
     if request.method == 'POST':
         try:
             with transaction.atomic():
                 respondent = request.user if request.user.is_authenticated else None
                 response = Response.objects.create(survey=survey, respondent=respondent)
-                
-                section_index = 1
+
                 for question in survey.questions.all():   
                     if isinstance(question, SectionHeader):
                         continue  # Skip SectionHeader questions
@@ -729,7 +811,7 @@ def survey_submit(request, uuid):
                     base_key = f'question_{question.position}'
                     values = request.POST.getlist(base_key)
                     
-                    if question.NAME == 'Matrix Question':
+                    if question.NAME in  ['Matrix Question', "سؤال مصفوفة"]:
                         answer_data = {}
                         for i, row_label in enumerate(question.rows, start=1):
                             old_key = f'{row_label}_row{i}'
@@ -740,7 +822,7 @@ def survey_submit(request, uuid):
                                 answer_data[row_label] = ""  # some default value
 
 
-                    elif question.NAME == 'Ranking Question':
+                    elif question.NAME in ['Rank Question', "سؤال ترتيب"]:
                         if values:
                             # Save as dict where key is the rank (1-based)
                             answer_data = {val: str(i) for i, val in enumerate(values[::-1], start=1)}
@@ -757,24 +839,21 @@ def survey_submit(request, uuid):
                     
                     # 2. Server-side Validation
                     if question.required and not answer_data:
-                        redirect_url = reverse('Survey_Start', args=[survey.uuid])
+                        redirect_url = reverse('survey_start', args=[survey.uuid])
                         return redirect(redirect_url)
 
                     if answer_data is not None:
                         Answer.objects.create(
                             response=response,
                             question=question,
-                            answer_data=answer_data,
-                            section=section_index
+                            answer_data=answer_data
                         )
         
         except Exception as e:
             # Handle exceptions, possibly logging or user feedback
             return HttpResponse("An error occurred while submitting the survey.", status=500)
-            
         if request.user.is_authenticated:
             logout(request)
-
         return render(request, 'Thanks.html', {'survey': survey})
 
 def export_survey_data(request, uuid):

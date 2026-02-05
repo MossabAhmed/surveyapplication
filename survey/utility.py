@@ -196,14 +196,14 @@ def get_survey_data_by_sections(survey, format_type='raw', responses=None):
         if format_type == 'numeric':
             for q in questions:
                 # IMPORTANT: Polymorphic 'q' required for attribute access (options, rows, etc.)
-                if q.NAME in ["Likert Question", "Multi-Choice Question"]:
+                if isinstance(q, (LikertQuestion, MultiChoiceQuestion)):
                     for option in q.options:
                         header.append(f"{q.label} [{option}]")
-                elif q.NAME == "Matrix Question":
+                elif isinstance(q, MatrixQuestion):
                     for row in q.rows:
                         for col in q.columns:
                             header.append(f"{q.label} [{row} - {col}]")
-                elif q.NAME == "Ranking Question":
+                elif isinstance(q, RankQuestion):
                     for op in q.options:
                         header.append(f"{q.label} [{op}]")
                 else:
@@ -327,10 +327,18 @@ def get_question_analytics(question):
     """
     Calculate and return analytics data for a single question.
     """
+    # Count unique respondents who answered this question (excluding empty answers)
+    unique_respondents = Answer.objects.filter(question=question)\
+                                       .exclude(answer_data__isnull=True)\
+                                       .exclude(answer_data__exact='')\
+                                       .values('response')\
+                                       .distinct()\
+                                       .count()
+    
     data = {
         'question': question,
         'type': type(question).__name__,
-        'total_question_answers': Answer.objects.filter(question=question).count()
+        'total_question_answers': unique_respondents 
     }
     
     # Polymorphic handling - optimization: use 'question' directly if it's already the child instance
@@ -356,19 +364,35 @@ def get_question_analytics(question):
         data['chart_type'] = 'bar'
         
     elif isinstance(question, MatrixQuestion):
+        # Override total_question_answers for MatrixQuestion to exclude empty submissions
+        # (Matrix answers are saved as dicts with empty strings, so generic exclude fails)
+        valid_responses_count = 0
+        all_matrix_answers = Answer.objects.filter(question=question)
+        for ans in all_matrix_answers:
+            if isinstance(ans.answer_data, dict) and any(v for v in ans.answer_data.values() if v):
+                valid_responses_count += 1
+        data['total_question_answers'] = valid_responses_count
+
         distribution = question.get_matrix_distribution()
         stats = question.get_row_statistics()
+        
+        # Calculate respondents count per row
+        # This assumes distribution[row] has counts for each column
+        # total for row = sum(cols.values())
         
         rows_data = []
         for row, cols in distribution.items():
             row_stat = stats.get(row, {'mean': 0, 'median': 0, 'interpretation': 'N/A', 't_test': 0})
+            row_respondents = sum(cols.values())
+            
             rows_data.append({
                 'label': row,
                 'cols': cols,
                 'mean': row_stat['mean'],
                 'median': row_stat['median'],
                 'interpretation': row_stat.get('interpretation', 'N/A'),
-                't_stat': row_stat.get('t_stat', 0)
+                't_stat': row_stat.get('t_stat', 0),
+                'total_responses': row_respondents
             })
 
         data['matrix_rows'] = rows_data
