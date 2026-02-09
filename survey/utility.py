@@ -415,11 +415,38 @@ def get_question_analytics(question):
     return data
 
 def get_correlation_table(survey, questions_id: list = None, split_count: int = 1):
-    head, rows, _ = get_survey_export_data(survey, format_type='numeric', questions_id=questions_id)
+    head, rows, data_questions = get_survey_export_data(survey, format_type='numeric', questions_id=questions_id)
 
     # If not enough rows or columns, we can't do correlation
     if not rows or len(head) < 2:
-        return None
+        return [], []
+
+    # Build Legend and Short Headers
+    new_headers = []
+    legend = []
+    
+    q_index = 0
+    for q in data_questions:
+        q_index += 1
+        # Simple Arabic detection
+        is_arabic = any('\u0600' <= c <= '\u06FF' for c in q.label)
+        prefix = 'س' if is_arabic else 'Q'
+        code = f"{prefix}{q_index}"
+        
+        legend.append({'code': code, 'label': q.label})
+        
+        if isinstance(q, (LikertQuestion, MultiChoiceQuestion)):
+            for option in q.options:
+                new_headers.append(f"{code} [{option}]")
+        elif isinstance(q, MatrixQuestion):
+            for row in q.rows:
+                for col in q.columns:
+                    new_headers.append(f"{code} [{row} - {col}]")
+        elif isinstance(q, RankQuestion):
+            for op in q.options:
+                new_headers.append(f"{code} [{op}]")
+        else:
+            new_headers.append(code)
 
     # head is [Col1, Col2, ...]
     # rows is [[val1, val2...], [val1, val2...]]
@@ -427,7 +454,14 @@ def get_correlation_table(survey, questions_id: list = None, split_count: int = 
     
     # Clean data: Remove non-numeric columns and convert
     cols_to_drop = ['Respondent', 'Submitted At']
+    
+    # We must drop these FIRST before replacing columns because head includes them
     df_clean = df.drop(columns=[c for c in cols_to_drop if c in df.columns], errors='ignore')
+    
+    # Now df_clean columns should match new_headers length
+    if len(df_clean.columns) == len(new_headers):
+        df_clean.columns = new_headers
+    
     df_clean = df_clean.apply(pd.to_numeric, errors='coerce')
     df_clean = df_clean.dropna(axis=1, how='all') # Drop empty cols
     df_clean = df_clean.fillna(0)
@@ -435,7 +469,7 @@ def get_correlation_table(survey, questions_id: list = None, split_count: int = 
     # Need at least 2 columns with variance for correlation
     num_total_vars = df_clean.shape[1]
     if num_total_vars < 2:
-        return None
+        return [], []
     
     # 1. Calculate Full Correlation Matrix
     correlation_matrix = df_clean.corr().fillna(0)
@@ -545,4 +579,4 @@ def get_correlation_table(survey, questions_id: list = None, split_count: int = 
             finally:
                 plt.close()
 
-    return charts
+    return charts, legend

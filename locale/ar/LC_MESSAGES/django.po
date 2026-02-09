@@ -1207,6 +1207,13 @@ msgstr "حدد \"مقارنة\" على سؤالين على الأقل أعلاه
 msgid "Requires sufficient numerical data in responses"
 msgstr "يتطلب بيانات رقمية كافية في الردود"
 
+msgid "Question Legend"
+msgstr "تفسير الأسئلة"
+
+#: .\survey\templates\partials\SurveyAnalytics\correlation_table.html:74
+msgid "Code"
+msgstr "الرمز"
+
 #: .\survey\templates\Thanks.html:35
 msgid "Thank You!"
 msgstr "شكراً لك!"

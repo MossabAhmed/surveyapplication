@@ -1002,8 +1002,7 @@ def correlation_table(request, uuid):
     split_count = request.GET.get('split', 1)
 
     if not questions_id:
-        return render(request, 'partials/SurveyAnalytics/correlation_table.html', {'charts': [], 'survey': survey})
+        return render(request, 'partials/SurveyAnalytics/correlation_table.html', {'charts': [], 'legend': [], 'survey': survey})
 
-
-    charts = get_correlation_table(survey, questions_id, split_count=split_count)
-    return render(request, 'partials/SurveyAnalytics/correlation_table.html', {'charts': charts, 'survey': survey})
+    charts, legend = get_correlation_table(survey, questions_id, split_count=split_count)
+    return render(request, 'partials/SurveyAnalytics/correlation_table.html', {'charts': charts, 'legend': legend, 'survey': survey})
