@@ -25,6 +25,11 @@
                                 <span class="text-gray-500">{% trans "Survey Name" %}</span>
                             </label>
                             {{ form.title }}
+                            {% if form.title.errors %}
+                                <div class="label">
+                                    <span class="label-text-alt text-error">{{ form.title.errors.0 }}</span>
+                                </div>
+                            {% endif %}
                         </div>
                         
                         <div class="form-control w-full">

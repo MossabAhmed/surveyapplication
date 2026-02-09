@@ -1183,6 +1183,13 @@ msgstr "تحليل ارتباط الميزات"
 msgid "Visualizing relationships between question responses"
 msgstr "تصوير العلاقات بين ردود الأسئلة"
 
+#: .\survey\templates\partials\SurveyAnalytics\correlation_table.html:24
+msgid "Select All"
+msgstr "تحديد الكل"
+
+msgid "Deselect All"
+msgstr "إلغاء تحديد الكل"
+
 #: .\survey\templates\partials\SurveyAnalytics\correlation_table.html:27
 msgid "Generate Correlation"
 msgstr "توليد الارتباط"
@@ -1308,3 +1315,47 @@ msgstr "ليس لديك حساب؟"
 #: .\templates\account\login.html:109
 msgid "Create New Surveyor Account"
 msgstr "إنشاء حساب جديد"
+
+#: .\survey\views.py:106
+msgid "Survey saved as draft. You must add at least one question to publish."
+msgstr "تم حفظ الاستبيان كمسودة. يجب عليك إضافة سؤال واحد على الأقل للنشر."
+
+msgid "Survey saved as draft. Duplicate questions are not allowed."
+msgstr "تم حفظ الاستبيان كمسودة. لا يسمح بالأسئلة المكررة."
+
+#: .\survey\views.py:108
+msgid "Survey saved as draft. All sections must contain at least one question."
+msgstr "تم حفظ الاستبيان كمسودة. يجب عليك إضافة سؤال لكل قسم على الأقل."
+
+#: .\survey\views.py:111
+msgid "Survey published successfully."
+msgstr "تم نشر الاستبيان بنجاح."
+
+#: .\survey\views.py:113
+msgid "Survey saved as draft."
+msgstr "تم حفظ الاستبيان كمسودة."
+
+#: .\survey\views.py:329
+msgid "Survey \"%s\" was successfully deleted."
+msgstr "تم حذف الاستبيان \"%s\" بنجاح."
+
+#: .\survey\views.py:331
+msgid "An error occurred while deleting the survey: %s"
+msgstr "حدث خطأ أثناء حذف الاستبيان: %s"
+
+#: .\survey\views.py:794
+msgid "You cannot publish a survey with no questions."
+msgstr "لا يمكنك نشر استبيان بدون أسئلة."
+
+#: .\survey\views.py:818
+msgid "All sections must contain at least one question."
+msgstr "يجب أن يحتوي كل قسم على سؤال واحد على الأقل."
+
+#: .\survey\views.py:826
+msgid "You cannot publish a survey with duplicate questions."
+msgstr "لا يمكنك نشر استبيان يحتوي على أسئلة مكررة."
+
+#: .\survey\forms.py:30
+msgid "You already have a survey with this title."
+msgstr "لديك بالفعل استبيان بهذا العنوان."
+

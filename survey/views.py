@@ -44,7 +44,7 @@ def create_survey(request):
     template_name = 'CreateSurvey.html'
 
     if request.method == 'GET':
-        form = SurveyForm()
+        form = SurveyForm(user=request.user)
         question_formset = QuestionFormSet(queryset=que.objects.none())
 
         context = {
@@ -55,7 +55,7 @@ def create_survey(request):
         }
         return render(request, template_name, context)
 
-    form = SurveyForm(request.POST)
+    form = SurveyForm(request.POST, user=request.user)
     question_formset = QuestionFormSet(request.POST, instance=form.instance, queryset=que.objects.none())
 
     if form.is_valid() and question_formset.is_valid():
@@ -77,10 +77,50 @@ def create_survey(request):
             edit_url = reverse('EditSurvey', args=[survey.uuid])
             return redirect(f"{preview_url}?back_url={edit_url}")
 
+        # Validation Logic
+        action = request.POST.get('action')
+        forms_list = [f for f in question_formset.forms if not f.cleaned_data.get('DELETE', False)]
+        forms_list.sort(key=lambda x: x.cleaned_data.get('position', 0))
+
+        has_questions = any(not isinstance(f.instance, SectionHeader) for f in forms_list)
+        empty_section_found = False
+        active_section = False
+        section_has_questions = False
+        
+        # Check for duplicate questions
+        question_labels = [f.cleaned_data.get('label').strip().lower() for f in forms_list if not isinstance(f.instance, SectionHeader) and f.cleaned_data.get('label')]
+        has_duplicates = len(question_labels) != len(set(question_labels))
+
+        for f in forms_list:
+            if isinstance(f.instance, SectionHeader):
+                if active_section and not section_has_questions:
+                    empty_section_found = True
+                    break
+                active_section = True
+                section_has_questions = False
+            else:
+                section_has_questions = True
+
+        if active_section and not section_has_questions:
+            empty_section_found = True
+
+        new_state = 'draft'
+        if action == 'publish':
+            if not has_questions:
+                messages.warning(request, _("Survey saved as draft. You must add at least one question to publish."))
+            elif empty_section_found:
+                 messages.warning(request, _("Survey saved as draft. All sections must contain at least one question."))
+            elif has_duplicates:
+                 messages.warning(request, _("Survey saved as draft. Duplicate questions are not allowed."))
+            else:
+                 new_state = 'published'
+                 messages.success(request, _("Survey published successfully."))
+        elif action == 'save_draft':
+             messages.success(request, _("Survey saved as draft."))
+
         with transaction.atomic():
             survey = form.save(commit=False)
-            action = request.POST.get('action')
-            survey.state = 'published' if action == 'publish' else 'draft'
+            survey.state = new_state
             survey.created_by = request.user
             survey.save()
 
@@ -106,7 +146,7 @@ def edit_survey(request, uuid):
     survey = get_object_or_404(Survey, uuid=uuid)
 
     if request.method == 'GET':
-        form = SurveyForm(instance=survey)
+        form = SurveyForm(instance=survey, user=request.user)
         question_formset = QuestionFormSet(instance=survey, queryset=survey.questions.all())
 
         return render(request, template_name, {
@@ -116,7 +156,7 @@ def edit_survey(request, uuid):
             'form_action_url': reverse('EditSurvey', kwargs={'uuid': survey.uuid}),
         })
 
-    form = SurveyForm(request.POST, instance=survey)
+    form = SurveyForm(request.POST, instance=survey, user=request.user)
     question_formset = QuestionFormSet(request.POST, instance=survey, queryset=survey.questions.all())
 
     if form.is_valid() and question_formset.is_valid():
@@ -136,10 +176,50 @@ def edit_survey(request, uuid):
             edit_url = reverse('EditSurvey', args=[updated_survey.uuid])
             return redirect(f"{preview_url}?back_url={edit_url}")
 
+        # Validation Logic
+        action = request.POST.get('action')
+        forms_list = [f for f in question_formset.forms if not f.cleaned_data.get('DELETE', False)]
+        forms_list.sort(key=lambda x: x.cleaned_data.get('position', 0))
+
+        has_questions = any(not isinstance(f.instance, SectionHeader) for f in forms_list)
+        empty_section_found = False
+        active_section = False
+        section_has_questions = False
+
+        # Check for duplicate questions
+        question_labels = [f.cleaned_data.get('label').strip().lower() for f in forms_list if not isinstance(f.instance, SectionHeader) and f.cleaned_data.get('label')]
+        has_duplicates = len(question_labels) != len(set(question_labels))
+
+        for f in forms_list:
+            if isinstance(f.instance, SectionHeader):
+                if active_section and not section_has_questions:
+                    empty_section_found = True
+                    break
+                active_section = True
+                section_has_questions = False
+            else:
+                section_has_questions = True
+
+        if active_section and not section_has_questions:
+            empty_section_found = True
+
+        new_state = 'draft'
+        if action == 'publish':
+            if not has_questions:
+                messages.warning(request, _("Survey saved as draft. You must add at least one question to publish."))
+            elif empty_section_found:
+                 messages.warning(request, _("Survey saved as draft. All sections must contain at least one question."))
+            elif has_duplicates:
+                 messages.warning(request, _("Survey saved as draft. Duplicate questions are not allowed."))
+            else:
+                 new_state = 'published'
+                 messages.success(request, _("Survey published successfully."))
+        elif action == 'save_draft':
+             messages.success(request, _("Survey saved as draft."))
+
         with transaction.atomic():
             updated_survey = form.save(commit=False)
-            action = request.POST.get('action')
-            updated_survey.state = 'published' if action == 'publish' else 'draft'
+            updated_survey.state = new_state
             updated_survey.save()
 
             question_formset.instance = updated_survey
@@ -698,6 +778,54 @@ def ToggleSurveyStatus(request, uuid):
     if survey.state == 'published':
         survey.state = 'archived'
     elif survey.state == 'draft':
+        # Validation before publishing
+        questions = survey.questions.all().select_related('polymorphic_ctype').order_by('position')
+        has_questions = False
+        
+        # Check if there are any real questions
+        for q in questions:
+            if not isinstance(q, SectionHeader):
+                has_questions = True
+                break
+        
+        if not has_questions:
+             return render(request, 'partials/Dashboard/status_modal.html', {
+                'survey': survey, 
+                'error': _("You cannot publish a survey with no questions.")
+            })
+
+        # Check for empty sections
+        empty_section_found = False
+        active_section = False
+        section_has_questions = False
+
+        for q in questions:
+            if isinstance(q, SectionHeader):
+                if active_section and not section_has_questions:
+                    empty_section_found = True
+                    break
+                active_section = True
+                section_has_questions = False
+            else:
+                section_has_questions = True
+
+        if active_section and not section_has_questions:
+            empty_section_found = True
+            
+        if empty_section_found:
+            return render(request, 'partials/Dashboard/status_modal.html', {
+                'survey': survey, 
+                'error': _("All sections must contain at least one question.")
+            })
+        
+        # Check for duplicate questions (case-insensitive)
+        question_labels = [q.label.strip().lower() for q in questions if not isinstance(q, SectionHeader) and q.label]
+        if len(question_labels) != len(set(question_labels)):
+            return render(request, 'partials/Dashboard/status_modal.html', {
+                'survey': survey, 
+                'error': _("You cannot publish a survey with duplicate questions.")
+            })
+
         survey.state = 'published'
     elif survey.state == 'archived':
         survey.state = 'draft'

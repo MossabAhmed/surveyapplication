@@ -52,7 +52,9 @@ any 'recently_viewed': recently_viewed, # list of recently viewed items }
       id="pagination-controls"
       hx-swap-oob="true"
     >
+      {% if page.has_other_pages %}
       {% include "partials/Dashboard/pagination.html" %}
+      {% endif %}
     </nav>
   </div>
   <div id="koko" class="w-full h-fit"></div>

@@ -16,6 +16,14 @@
             
             <!-- Update Button -->
             <div class="flex items-center gap-2">
+                {% comment %} Select All Button {% endcomment %}
+                <button type="button" class="btn btn-outline btn-sm print:hidden group" onclick="toggleAllCorrelationQuestions(this)">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+                    </svg>
+                    <span class="btn-text">{% trans "Select All" %}</span>
+                </button>
+
                 <div class="join">
                     <button class="join-item btn btn-sm {% if not request.GET.split or request.GET.split == '1' %}btn-active{% endif %} group"
                             hx-get="{% url 'correlation_table' survey.uuid %}?split=1"
@@ -119,3 +127,36 @@
         </div>
     </div>
 </div>
+
+<script>
+    function toggleAllCorrelationQuestions(btn) {
+        const checkboxes = document.querySelectorAll('input[name="correlation_question"]');
+        // Check if all are currently checked
+        const allChecked = Array.from(checkboxes).every(cb => cb.checked);
+        
+        checkboxes.forEach(cb => {
+            cb.checked = !allChecked;
+        });
+
+        // Update button text and style
+        const span = btn.querySelector('.btn-text');
+        
+        if (!allChecked) {
+            // State: All Selected (Active)
+            if (span) span.textContent = "{% trans 'Deselect All' %}";
+            btn.classList.remove('btn-outline');
+            btn.classList.add('btn-error', 'text-white'); // Red explicitly indicating "Clear selection"
+            // Change icon to 'X'
+            const svg = btn.querySelector('svg');
+            if(svg) svg.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />';
+        } else {
+            // State: Not Selected (Default)
+            if (span) span.textContent = "{% trans 'Select All' %}";
+            btn.classList.add('btn-outline');
+            btn.classList.remove('btn-error', 'text-white');
+            // Change icon back to List/Check
+            const svg = btn.querySelector('svg');
+            if(svg) svg.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />';
+        }
+    }
+</script>

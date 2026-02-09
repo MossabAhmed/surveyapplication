@@ -16,6 +16,20 @@ class CustomUserCreationForm(UserCreationForm):
         self.fields['username'].help_text = ''
 
 class SurveyForm(forms.ModelForm):
+    def __init__(self, *args, **kwargs):
+        self.user = kwargs.pop('user', None)
+        super(SurveyForm, self).__init__(*args, **kwargs)
+
+    def clean_title(self):
+        title = self.cleaned_data.get('title')
+        if self.user:
+            qs = models.Survey.objects.filter(created_by=self.user, title__iexact=title)
+            if self.instance.pk:
+                qs = qs.exclude(pk=self.instance.pk)
+            if qs.exists():
+                raise forms.ValidationError(_("You already have a survey with this title."))
+        return title
+
     class Meta:
         model = models.Survey
         fields = ['title', 'description', 'shuffle_questions', 'anonymous_responses']
