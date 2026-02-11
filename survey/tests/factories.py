@@ -75,7 +75,6 @@ class LikertQuestionFactory(QuestionFactory):
         model = LikertQuestion
         
     options = factory.LazyAttribute(lambda o: ["Strongly Disagree", "Disagree", "Neutral", "Agree", "Strongly Agree"])
-    scale_max = 5
 
 class MatrixQuestionFactory(QuestionFactory):
     class Meta:
@@ -102,7 +101,7 @@ class ResponseFactory(DjangoModelFactory):
         model = Response
 
     survey = factory.SubFactory(SurveyFactory)
-    # If you want anonymous responses, you can set this to None in the test
+    # OR None, to create anonymous responses
     respondent = factory.SubFactory(UserFactory) 
     completed = True
 
@@ -111,12 +110,9 @@ class AnswerFactory(DjangoModelFactory):
         model = Answer
 
     response = factory.SubFactory(ResponseFactory)
+    # default to MultiChoiceQuestion, but can be overridden to any question type
     question = factory.SubFactory(MultiChoiceQuestionFactory)
-    section = 1
     answer_data = "Red" 
-
-    # Note: 'question' and 'answer_data' must be passed when calling
-    # AnswerFactory.create(question=question_instance, answer_data="Red")
 
 class SectionHeaderFactory(DjangoModelFactory):
     class Meta:

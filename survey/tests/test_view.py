@@ -1,7 +1,7 @@
 from django.http import QueryDict
 import pytest
 from survey.tests.factories import (
-    RatingQuestionFactory, ResponseFactory, SurveyFactory, SectionHeaderFactory, AnswerFactory, MatrixQuestionFactory, MultiChoiceQuestionFactory)
+    RatingQuestionFactory, ResponseFactory, SurveyFactory, SectionHeaderFactory, AnswerFactory, MatrixQuestionFactory, MultiChoiceQuestionFactory, LikertQuestionFactory)
 from survey.utility import (
     get_dashboard_surveys,
     normalize_formset_indexes, 
@@ -281,50 +281,113 @@ class TestSurveyDataBySections:
     def test_numeric_expansion_in_sections(self):
         """Verify that multi-choice questions expand into multiple columns in numeric mode."""
         survey = SurveyFactory()
-        # Create a multi-choice question with 2 options
+        
+        # Section 1: Hobbies (Default Start Section)
+        # Explicit position to ensure order
         q_multi = MultiChoiceQuestionFactory(
             survey=survey, 
             label="Hobbies", 
+            position=1,
             options=["Sports", "Music"]
         )
+
+        # Start Section 2: Interests
+        SectionHeaderFactory(survey=survey, label="Interests", position=2)
+
+        # Question in Section 2
+        likert_q = LikertQuestionFactory(
+            survey=survey, 
+            label="Satisfaction", 
+            position=3, 
+            options=["1", "2", "3", "4", "5"]
+        )
         
-        # Create a response selecting only 'Sports'
+        # Create a response
         resp = ResponseFactory(survey=survey)
         AnswerFactory(
             response=resp, 
             question=q_multi, 
             answer_data=["Sports"]
         )
+        AnswerFactory(
+            response=resp, 
+            question=likert_q, 
+            answer_data="5"
+        )
         
         results = get_survey_data_by_sections(survey, format_type='numeric')
         
-        header = results[0]['header']
-        row = results[0]['rows'][0]
+        # We expect 2 sections
+        assert len(results) == 2
         
-        # Check Header Expansion: ['Respondent', 'Submitted At', 'Hobbies [Sports]', 'Hobbies [Music]']
-        assert "Hobbies [Sports]" in header
-        assert "Hobbies [Music]" in header
+        # --- CHECK SECTION 1 ---
+        header1 = results[0]['header']
+        row1 = results[0]['rows'][0]
         
-        # Check Data Mapping (Usually 1 for selected, 0 for not)
-        # respondent=0, date=1, sports=2, music=3
-        assert row[2] == '1'
-        assert row[3] == '0'
+        # Headers for section 1
+        assert "Hobbies [Sports]" in header1
+        assert "Hobbies [Music]" in header1
+        # Data for section 1 (respondent=0, date=1, sports=2, music=3)
+        assert row1[2] == '1'
+        assert row1[3] == '0'
+        
+        # --- CHECK SECTION 2 ---
+        header2 = results[1]['header']
+        row2 = results[1]['rows'][0]
+        
+        # Headers for section 2
+        assert "Satisfaction [1]" in header2
+        assert "Satisfaction [5]" in header2
+        
+        # Data for section 2
+        # Index depends on how Likert expands. 
+        # Usually: 1, 2, 3, 4, 5 -> 5 columns.
+        # respondent=0, date=1, 1=2, 2=3, 3=4, 4=5, 5=6
+        assert row2[2] == '0' # Option 1
+        assert row2[6] == '1' # Option 5
 
     def test_raw_formatting_with_complex_types(self):
         """Verify that Dicts (Matrix/Rank) are formatted as strings in 'raw' mode."""
         survey = SurveyFactory()
-        q_matrix = MatrixQuestionFactory(survey=survey, label="Grid")
+        
+        # Section 1: Hobbies (Default Start Section)
+        # Explicit position to ensure order
+        q_matrix = MatrixQuestionFactory(
+            survey=survey, 
+            label="Grid", 
+            position=1
+        )
+
+        # Start Section 2: Interests
+        SectionHeaderFactory(survey=survey, label="Interests", position=2)
+
+        # Question in Section 2
+        likert_q = LikertQuestionFactory(
+            survey=survey, 
+            label="Satisfaction", 
+            position=3, 
+            options=["1", "2", "3", "4", "5"]
+        )
         
         resp = ResponseFactory(survey=survey)
         payload = {"Row A": "Col 1", "Row B": "Col 2"}
         AnswerFactory(response=resp, question=q_matrix, answer_data=payload)
+        AnswerFactory(response=resp, question=likert_q, answer_data="5")
         
         results = get_survey_data_by_sections(survey, format_type='raw')
         
-        row_data = results[0]['rows'][0][2]
+        # We expect 2 sections
+        assert len(results) == 2
+
+        # --- CHECK SECTION 1 ---
+        row_data1 = results[0]['rows'][0][2]
         # Expecting a string like "Row A: 'Col 1' | Row B: 'Col 2'"
-        assert "Row A: 'Col 1'" in row_data
-        assert "|" in row_data
+        assert "Row A: 'Col 1'" in row_data1
+        assert "|" in row_data1
+
+        # --- CHECK SECTION 2 ---
+        row_data2 = results[1]['rows'][0][2]
+        assert "5" in row_data2
 
     def test_empty_sections_removal(self):
         """Verify that sections with no questions (e.g., two headers in a row) are excluded."""
@@ -349,8 +412,4 @@ class TestSurveyDataBySections:
         
         results = get_survey_data_by_sections(survey)
         assert results[0]['rows'][0][0] == "Anonymous"
-
-
-
-
 
