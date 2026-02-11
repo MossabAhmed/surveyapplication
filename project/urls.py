@@ -17,8 +17,22 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import include, path
 from debug_toolbar.toolbar import debug_toolbar_urls
+from django.contrib.sites.models import Site
+from django.http import HttpResponse
+
+def create_site_emergency(request):
+    # إنشاء الموقع رقم 1 يدوياً
+    site, created = Site.objects.get_or_create(
+        id=1, 
+        defaults={'domain': 'askio-survey.onrender.com', 'name': 'Askio'}
+    )
+    if not created:
+        site.domain = 'askio-survey.onrender.com'
+        site.save()
+    return HttpResponse(f"Site created/updated with ID: {site.id}")
 
 urlpatterns = [
+    path('emergency-site-fix/', create_site_emergency),
     path('admin/', admin.site.urls),
     path('i18n/', include('django.conf.urls.i18n')),
     path('', include('survey.urls')),
