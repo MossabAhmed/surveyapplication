@@ -26,7 +26,7 @@ gunicorn==24.0.0
 idna==3.11
 jsbeautifier==1.15.4
 json5==0.12.1
-jwt==1.4.0
+# jwt==1.4.0  <-- Remove this conflicting package
 kiwisolver==1.4.9
 matplotlib==3.10.8
 numpy==2.2.6
