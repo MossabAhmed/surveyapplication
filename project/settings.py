@@ -31,6 +31,12 @@ DEBUG = os.environ.get('DEBUG', 'False') == 'True'
 
 ALLOWED_HOSTS = ['*']
 
+# Render hosting configuration
+# Trust the X-Forwarded-Proto header set by the Render load balancer
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+# Allow CSRF/CORS for the Render domain
+CSRF_TRUSTED_ORIGINS = ['https://*.onrender.com']
+
 
 # Application definition
 
