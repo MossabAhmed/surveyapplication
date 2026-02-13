@@ -290,11 +290,16 @@ class AddQuestionFormView(LoginRequiredMixin, View):
         print(f"Mapped '{question_type_name}' to '{mapped_key}'")
         FormClass = ModelFormMap[mapped_key]
 
+        # EXPLICITLY set the polymorphic_ctype in initial data to prevent validation errors
+        # when adding questions dynamically.
+        ctype = ContentType.objects.get_for_model(FormClass.Meta.model)
+
         form = FormClass(
             prefix=f'questions-{question_index}', 
             initial={
                 'question_type': mapped_key, # IMPORTANT: Save the English key, not the translated one
                 'position': question_index + 1,
+                'polymorphic_ctype': ctype.id
             }
         )
 
